@@ -2,18 +2,20 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Sidebar from '../components/Sidebar';
 import ThemeToggle from '../components/ThemeToggle';
+import { getCategories } from '../lib/data';
 
 export const metadata: Metadata = {
   title: 'SkillsBhandar — আপনার সব AI কাজ। এক লাইব্রেরি।',
   description: 'আপনার সব AI কাজ। এক লাইব্রেরি।',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const categories = await getCategories();
   return (
     <html lang="bn" data-theme="dark">
       <body>
         <div className="shell">
-          <Sidebar />
+          <Sidebar categories={categories} />
           <div className="content">
             <header className="topbar">
               <span className="crumb">SkillsBhandar</span>

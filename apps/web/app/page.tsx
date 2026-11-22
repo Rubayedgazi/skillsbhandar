@@ -49,7 +49,7 @@ export default async function Home() {
           {categories.map((c) => {
             const color = categoryColor(c.slug);
             return (
-              <Link key={c.id} href={`/explore?category=${c.slug}`} className="cat-tile">
+              <Link key={c.id} href={`/categories/${c.slug}`} className="cat-tile">
                 <span className="cat-icon" style={{ background: `${color}22`, color }}>
                   <Icon name={categoryIcon(c.slug)} size={21} />
                 </span>

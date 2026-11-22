@@ -40,7 +40,7 @@ h1, h2, h3 { line-height: 1.25; letter-spacing: -.01em; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 28px; position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
 .topbar .crumb { font-weight: 700; font-size: 15px; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
-.main { padding: 26px 28px 40px; max-width: 1080px; }
+.main { padding: 26px 28px 40px; width: 100%; }
 .hamburger { display: none; }
 .mobile-bar { display: none; }
 
@@ -188,4 +188,20 @@ footer.site-footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid 
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .main { padding: 16px 12px 28px; }
   .topbar { padding: 10px 12px; }
+}
+/* ---------- wide desktop (1440px / 1920px): content fills the screen ----------
+   Cause of the bug: .main used to be capped at max-width: 1080px with no
+   margin, so on a big PC the content stopped 1080px from the left and the
+   rest of the screen stayed empty. The cap is gone (see .main above) and
+   only wide screens get roomier padding, so the top bar lines up with the
+   content below it. Small-screen rules above are untouched. */
+@media (min-width: 1440px) {
+  .main { padding: 32px 40px 48px; }
+  .topbar { padding: 14px 40px; }
+  .cat-grid { gap: 16px; }
+}
+@media (min-width: 1920px) {
+  .main { padding: 36px 48px 56px; }
+  .topbar { padding: 14px 48px; }
+  .cat-grid { gap: 18px; }
 }
