@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createSupabaseClient } from '@skillsbhandar/shared';
+import { Icon } from '../../components/icons';
 
 export default function Account() {
   const [email, setEmail] = useState('');
@@ -16,15 +17,23 @@ export default function Account() {
   };
   return (
     <div>
-      <h1>অ্যাকাউন্ট</h1>
-      {email ? (
-        <div className="card" style={{ padding: 18 }}>
-          <p>ইমেইল: <strong>{email}</strong></p>
-          <button className="btn-ghost" onClick={signOut}>সাইন আউট</button>
-        </div>
-      ) : (
-        <p className="muted">আপনি সাইন ইন করেননি। <a href="/signin" style={{ color: 'var(--accent1)' }}>সাইন ইন করুন</a>।</p>
-      )}
+      <div className="page-head">
+        <h1>অ্যাকাউন্ট</h1>
+        <p className="muted">আপনার অ্যাকাউন্টের তথ্য।</p>
+      </div>
+      <div style={{ marginTop: 20, maxWidth: 520 }}>
+        {email ? (
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <span className="row-icon"><Icon name="user" size={19} /></span>
+              <div><strong>ইমেইল</strong><p className="muted" style={{ margin: 0 }}>{email}</p></div>
+            </div>
+            <button className="btn-ghost" style={{ marginTop: 16 }} onClick={signOut}>সাইন আউট</button>
+          </div>
+        ) : (
+          <div className="empty">আপনি সাইন ইন করেননি। <a href="/signin" style={{ color: 'var(--accent1)', fontWeight: 700 }}>সাইন ইন করুন</a>।</div>
+        )}
+      </div>
     </div>
   );
 }

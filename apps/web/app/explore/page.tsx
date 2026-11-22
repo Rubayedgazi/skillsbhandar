@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCategories, getSkills } from '../../lib/data';
 import Finder from './Finder';
+import { Icon } from '../../components/icons';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,28 +19,40 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
   else if (params.sort === 'az') list = [...list].sort((a, b) => a.title.localeCompare(b.title));
   return (
     <div>
-      <h1>স্কিল ঘুরে দেখুন</h1>
-      <Finder skills={skills} categories={categories} />
-      <h2 style={{ marginTop: 28 }}>অথবা নিজে খুঁজুন</h2>
-      <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input className="input" name="q" defaultValue={params.q || ''} placeholder="খুঁজুন…" style={{ maxWidth: 320 }} />
-        <select className="input" name="category" defaultValue={params.category || ''} style={{ maxWidth: 220 }}>
-          <option value="">সব ক্যাটাগরি</option>
-          {categories.map((c) => <option key={c.id} value={c.slug}>{c.name}</option>)}
-        </select>
-        <select className="input" name="sort" defaultValue={params.sort || ''} style={{ maxWidth: 180 }}>
-          <option value="">নতুন প্রথমে</option>
-          <option value="popular">জনপ্রিয়</option>
-          <option value="az">নাম অনুযায়ী</option>
-        </select>
-        <button className="btn" type="submit">খুঁজুন</button>
-      </form>
+      <div className="page-head">
+        <h1>স্কিল ঘুরে দেখুন</h1>
+        <p className="muted">ক্যাটাগরি, নাম বা কাজ দিয়ে খুঁজুন।</p>
+      </div>
       <div style={{ marginTop: 20 }}>
-        {list.length === 0 ? <p className="muted">কোনো স্কিল পাওয়া যায়নি। লাইব্রেরিতে এখনো স্কিল যোগ করা হয়নি।</p> : list.map((s) => (
-          <Link key={s.id} href={`/skills/${s.slug}`} className="card" style={{ display: 'block', padding: 14, marginBottom: 8 }}>
-            <strong>{s.title}</strong> <span className="muted">— {s.short_description} · {s.difficulty}</span>
-          </Link>
-        ))}
+        <Finder skills={skills} categories={categories} />
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>অথবা নিজে খুঁজুন</h2></div>
+        <form method="get" className="card" style={{ padding: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input className="input" name="q" defaultValue={params.q || ''} placeholder="খুঁজুন…" style={{ maxWidth: 320 }} />
+          <select className="input" name="category" defaultValue={params.category || ''} style={{ maxWidth: 220 }}>
+            <option value="">সব ক্যাটাগরি</option>
+            {categories.map((c) => <option key={c.id} value={c.slug}>{c.name}</option>)}
+          </select>
+          <select className="input" name="sort" defaultValue={params.sort || ''} style={{ maxWidth: 180 }}>
+            <option value="">নতুন প্রথমে</option>
+            <option value="popular">জনপ্রিয়</option>
+            <option value="az">নাম অনুযায়ী</option>
+          </select>
+          <button className="btn" type="submit"><Icon name="search" size={17} /> খুঁজুন</button>
+        </form>
+        <div style={{ marginTop: 16 }}>
+          {list.length === 0 ? (
+            <div className="empty">কোনো স্কিল পাওয়া যায়নি। লাইব্রেরিতে এখনো স্কিল যোগ করা হয়নি।</div>
+          ) : list.map((s) => (
+            <Link key={s.id} href={`/skills/${s.slug}`} className="row-card">
+              <span className="row-icon"><Icon name="book" size={19} /></span>
+              <span className="row-body"><b>{s.title}</b><span>{s.short_description} · {s.difficulty}</span></span>
+              <span className="row-arrow"><Icon name="arrow" size={17} /></span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

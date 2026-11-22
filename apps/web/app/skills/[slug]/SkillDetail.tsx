@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createSupabaseClient, type Skill } from '@skillsbhandar/shared';
+import { Icon } from '../../../components/icons';
 
 export default function SkillDetail({ skill, related, categoryName }: { skill: Skill; related: Skill[]; categoryName: string }) {
   const [done, setDone] = useState<string[]>([]);
@@ -46,39 +47,82 @@ export default function SkillDetail({ skill, related, categoryName }: { skill: S
   const pct = steps.length ? Math.round((done.length / steps.length) * 100) : 0;
   return (
     <div>
-      <p className="muted">{categoryName} · {skill.difficulty}</p>
-      <h1 style={{ marginTop: 4 }}>{skill.title}</h1>
-      <p className="muted">{skill.short_description}</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-        <button className="btn-ghost" onClick={toggleBookmark}>{bookmarked ? '★ বুকমার্ক করা' : '☆ বুকমার্ক করুন'}</button>
-        <button className="btn-ghost" onClick={() => { navigator.clipboard.writeText(skill.skill_md || skill.overview); setCopied(true); }}>{copied ? 'কপি হয়েছে' : 'SKILL.md কপি করুন'}</button>
-        <button className="btn" onClick={download}>ডাউনলোড করুন</button>
-      </div>
-      <h2 style={{ marginTop: 28 }}>বিবরণ</h2>
-      <p>{skill.overview}</p>
-      {skill.video_url && <div style={{ marginTop: 16 }}><iframe width="100%" height="360" src={skill.video_url} title="video" allowFullScreen style={{ border: 'none', borderRadius: 14 }} /></div>}
-      <h2 style={{ marginTop: 28 }}>ধাপে ধাপে শিখুন ({pct}% শেষ)</h2>
-      {steps.length === 0 ? <p className="muted">এই স্কিলের জন্য এখনো কোনো ধাপ যোগ করা হয়নি।</p> : steps.map((st) => (
-        <label key={st.id} className="card" style={{ display: 'block', padding: 14, marginBottom: 8 }}>
-          <input type="checkbox" checked={done.includes(st.id)} onChange={() => toggleStep(st.id)} /> <strong>{st.step_number}. {st.heading}</strong>
-          <p className="muted">{st.body}</p>
-          {st.tip && <p>💡 {st.tip}</p>}
-          {st.code_example && <pre>{st.code_example}</pre>}
-        </label>
-      ))}
-      <h2 style={{ marginTop: 28 }}>SKILL.md</h2>
-      <pre>{skill.skill_md || 'এই স্কিলের ফাইল এখনো যোগ করা হয়নি।'}</pre>
-      <h2 style={{ marginTop: 28 }}>সম্পর্কিত স্কিল</h2>
-      {related.length === 0 ? <p className="muted">কোনো সম্পর্কিত স্কিল নেই।</p> : related.map((r) => (
-        <Link key={r.id} href={`/skills/${r.slug}`} className="card" style={{ display: 'block', padding: 12, marginBottom: 8 }}>{r.title}</Link>
-      ))}
-      <h2 style={{ marginTop: 28 }}>সমস্যা জানান</h2>
-      {reportSent ? <p>ধন্যবাদ! আপনার রিপোর্ট পাঠানো হয়েছে।</p> : (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input className="input" value={report} onChange={(e) => setReport(e.target.value)} placeholder="কী সমস্যা?" />
-          <button className="btn-ghost" onClick={sendReport}>পাঠান</button>
+      <div className="card" style={{ padding: 24 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {categoryName && <span className="pill">{categoryName}</span>}
+          <span className="pill" style={{ background: 'var(--accent-soft2)', color: 'var(--accent2)' }}>{skill.difficulty}</span>
+          {skill.setup_time_minutes ? <span className="pill" style={{ background: 'var(--surface3)', color: 'var(--muted)' }}>{skill.setup_time_minutes} মিনিট</span> : null}
         </div>
-      )}
+        <h1 style={{ margin: '14px 0 6px', fontSize: 30 }}>{skill.title}</h1>
+        <p className="muted" style={{ margin: 0 }}>{skill.short_description}</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 18 }}>
+          <button className="btn-ghost" onClick={toggleBookmark}>
+            <Icon name="bookmark" size={17} /> {bookmarked ? 'বুকমার্ক করা' : 'বুকমার্ক করুন'}
+          </button>
+          <button className="btn-ghost" onClick={() => { navigator.clipboard.writeText(skill.skill_md || skill.overview); setCopied(true); }}>
+            <Icon name="copy" size={17} /> {copied ? 'কপি হয়েছে' : 'SKILL.md কপি করুন'}
+          </button>
+          <button className="btn" onClick={download}><Icon name="download" size={17} /> ডাউনলোড করুন</button>
+        </div>
+        <p className="muted" style={{ margin: '16px 0 0', fontSize: 13 }}>{skill.download_count} ডাউনলোড · {skill.view_count} বার দেখা হয়েছে</p>
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>বিবরণ</h2></div>
+        <p style={{ margin: 0 }}>{skill.overview}</p>
+        {skill.video_url && <div style={{ marginTop: 16 }}><iframe width="100%" height="360" src={skill.video_url} title="video" allowFullScreen style={{ border: 'none', borderRadius: 14 }} /></div>}
+      </div>
+
+      <div className="section">
+        <div className="section-head">
+          <h2>ধাপে ধাপে শিখুন</h2>
+          <span className="muted" style={{ fontSize: 14 }}>{done.length}/{steps.length} শেষ · {pct}%</span>
+        </div>
+        {steps.length > 0 && (
+          <div className="progress-track" style={{ marginBottom: 16 }}><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
+        )}
+        {steps.length === 0 ? <div className="empty">এই স্কিলের জন্য এখনো কোনো ধাপ যোগ করা হয়নি।</div> : steps.map((st) => (
+          <label key={st.id} className={`card step-card${done.includes(st.id) ? ' done' : ''}`}>
+            <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <input type="checkbox" checked={done.includes(st.id)} onChange={() => toggleStep(st.id)} style={{ marginTop: 4, width: 18, height: 18, accentColor: '#7c5cff' }} />
+              <span>
+                <strong>{st.step_number}. {st.heading}</strong>
+                <span className="muted" style={{ display: 'block', marginTop: 4 }}>{st.body}</span>
+                {st.tip && <span style={{ display: 'block', marginTop: 6 }}>💡 {st.tip}</span>}
+                {st.code_example && <span className="md-card" style={{ display: 'block', marginTop: 8 }}><pre>{st.code_example}</pre></span>}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>SKILL.md</h2></div>
+        <div className="md-card"><pre>{skill.skill_md || 'এই স্কিলের ফাইল এখনো যোগ করা হয়নি।'}</pre></div>
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>সম্পর্কিত স্কিল</h2></div>
+        {related.length === 0 ? <div className="empty">কোনো সম্পর্কিত স্কিল নেই।</div> : related.map((r) => (
+          <Link key={r.id} href={`/skills/${r.slug}`} className="row-card">
+            <span className="row-icon"><Icon name="book" size={19} /></span>
+            <span className="row-body"><b>{r.title}</b><span>{r.short_description}</span></span>
+            <span className="row-arrow"><Icon name="arrow" size={17} /></span>
+          </Link>
+        ))}
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>সমস্যা জানান</h2></div>
+        {reportSent ? (
+          <div className="card" style={{ padding: 18 }}><p className="ok-msg" style={{ margin: 0 }}>ধন্যবাদ! আপনার রিপোর্ট পাঠানো হয়েছে।</p></div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="input" value={report} onChange={(e) => setReport(e.target.value)} placeholder="কী সমস্যা?" />
+            <button className="btn-ghost" onClick={sendReport}>পাঠান</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

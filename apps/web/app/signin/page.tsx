@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { createSupabaseClient } from '@skillsbhandar/shared';
+import { createSupabaseClient, BRAND } from '@skillsbhandar/shared';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -17,13 +17,16 @@ export default function SignIn() {
     setMsg('সাইন ইন হয়েছে।');
   };
   return (
-    <div className="card" style={{ maxWidth: 420, margin: '40px auto', padding: 24 }}>
-      <h1>সাইন ইন</h1>
-      <p className="muted">শুধু অ্যাডমিনের তৈরি করা অ্যাকাউন্ট দিয়ে সাইন ইন করা যায়। নিজে অ্যাকাউন্ট খোলা যায় না।</p>
-      <label>ইমেইল<input className="input" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-      <label style={{ display: 'block', marginTop: 12 }}>পাসওয়ার্ড<input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-      <button className="btn" style={{ marginTop: 16, width: '100%' }} onClick={submit}>সাইন ইন</button>
-      {msg && <p style={{ color: ok ? 'green' : 'red' }}>{msg}</p>}
+    <div className="auth-wrap">
+      <div className="auth-card">
+        <div className="logo"><span className="logo-mark">S</span>{BRAND}</div>
+        <h1 style={{ textAlign: 'center', margin: '10px 0 4px', fontSize: 24 }}>সাইন ইন</h1>
+        <p className="muted" style={{ textAlign: 'center', margin: 0 }}>শুধু অ্যাডমিনের তৈরি করা অ্যাকাউন্ট দিয়ে সাইন ইন করা যায়। নিজে অ্যাকাউন্ট খোলা যায় না।</p>
+        <div className="field"><label>ইমেইল</label><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></div>
+        <div className="field"><label>পাসওয়ার্ড</label><input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+        <button className="btn" style={{ marginTop: 20, width: '100%', justifyContent: 'center' }} onClick={submit}>সাইন ইন</button>
+        {msg && <p className={ok ? 'ok-msg' : 'error'} style={{ textAlign: 'center' }}>{msg}</p>}
+      </div>
     </div>
   );
 }

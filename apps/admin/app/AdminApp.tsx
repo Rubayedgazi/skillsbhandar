@@ -3,19 +3,20 @@ import { useCallback, useEffect, useState } from 'react';
 import { BRAND, OWNER_EMAIL, PERMISSIONS, generatePassword, hasPermission, isOwner, slugify, type Category, type Permission, type Profile, type Report, type Skill, type SiteSettings, type Tutorial, type ActivityLog } from '@skillsbhandar/shared';
 import { getClient, getProfile, loadAll, logActivity } from '../lib/data';
 import Editors from '../components/Editors';
+import { Icon, type IconName } from '../components/icons';
 
 type Data = Awaited<ReturnType<typeof loadAll>>;
-const SECTIONS: { id: string; label: string; perm: Permission }[] = [
-  { id: 'overview', label: 'Overview', perm: 'Overview' },
-  { id: 'members', label: 'Member Logins', perm: 'Member Logins' },
-  { id: 'users', label: 'Users & Access', perm: 'Users & Access' },
-  { id: 'subadmins', label: 'Sub-Admins', perm: 'Sub-Admins' },
-  { id: 'skills', label: 'Skills', perm: 'Skills' },
-  { id: 'categories', label: 'Categories', perm: 'Categories' },
-  { id: 'tutorials', label: 'Tutorials', perm: 'Tutorials' },
-  { id: 'content', label: 'Website Content', perm: 'Website Content' },
-  { id: 'reports', label: 'Reports', perm: 'Reports' },
-  { id: 'activity', label: 'Activity Log', perm: 'Activity Log' },
+const SECTIONS: { id: string; label: string; perm: Permission; icon: IconName }[] = [
+  { id: 'overview', label: 'Overview', perm: 'Overview', icon: 'grid' },
+  { id: 'members', label: 'Member Logins', perm: 'Member Logins', icon: 'users' },
+  { id: 'users', label: 'Users & Access', perm: 'Users & Access', icon: 'shield' },
+  { id: 'subadmins', label: 'Sub-Admins', perm: 'Sub-Admins', icon: 'users' },
+  { id: 'skills', label: 'Skills', perm: 'Skills', icon: 'book' },
+  { id: 'categories', label: 'Categories', perm: 'Categories', icon: 'layout' },
+  { id: 'tutorials', label: 'Tutorials', perm: 'Tutorials', icon: 'play' },
+  { id: 'content', label: 'Website Content', perm: 'Website Content', icon: 'pen' },
+  { id: 'reports', label: 'Reports', perm: 'Reports', icon: 'flag' },
+  { id: 'activity', label: 'Activity Log', perm: 'Activity Log', icon: 'activity' },
 ];
 
 export default function AdminApp() {
@@ -94,59 +95,88 @@ export default function AdminApp() {
     setProfile(null); setData(null);
   };
 
-  if (loading) return <p style={{ padding: 40 }}>Loading SkillsBhandar Admin…</p>;
+  if (loading) {
+    return (
+      <div className="auth-wrap">
+        <p className="muted">Loading SkillsBhandar Admin…</p>
+      </div>
+    );
+  }
 
   if (!profile) {
     return (
-      <div className="card" style={{ maxWidth: 440, margin: '60px auto', padding: 28 }}>
-        <h1 style={{ marginTop: 0 }}>{BRAND} Admin</h1>
-        <p className="muted">Admin only. Member accounts are refused here.</p>
-        {!getClient() && <p style={{ color: 'red' }}>Supabase is not connected yet. Set the env vars in Vercel first.</p>}
-        {showSetup ? (
-          <div>
-            <p><strong>Set your owner password (one time only)</strong></p>
-            <p className="muted">Minimum 8 characters, typed twice. After this, the setup form never appears again.</p>
-            <input className="input" type="password" placeholder="New password" value={newPass} onChange={(e) => setNewPass(e.target.value)} />
-            <input className="input" type="password" placeholder="Type it again" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} style={{ marginTop: 8 }} />
-            <button className="btn" style={{ marginTop: 12, width: '100%' }} onClick={setupOwner}>Set owner password</button>
-            <button className="btn-ghost" style={{ marginTop: 8, width: '100%' }} onClick={() => setShowSetup(false)}>Back to sign-in</button>
-          </div>
-        ) : (
-          <div>
-            <label>ইমেইল<input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner@skillsbhandar.com" /></label>
-            <label style={{ display: 'block', marginTop: 12 }}>পাসওয়ার্ড<input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-            <button className="btn" style={{ marginTop: 16, width: '100%' }} onClick={signIn}>সাইন ইন</button>
-          </div>
-        )}
-        {msg && <p style={{ color: 'red' }}>{msg}</p>}
+      <div className="auth-wrap">
+        <div className="auth-card">
+          <div className="logo"><span className="logo-mark">S</span>{BRAND} Admin</div>
+          <p className="muted" style={{ textAlign: 'center', margin: '8px 0 0' }}>Admin only. Member accounts are refused here.</p>
+          {!getClient() && <p className="error" style={{ textAlign: 'center' }}>Supabase is not connected yet. Set the env vars in Vercel first.</p>}
+          {showSetup ? (
+            <div>
+              <h2 style={{ margin: '18px 0 4px', fontSize: 18 }}>Set your owner password (one time only)</h2>
+              <p className="muted" style={{ margin: 0, fontSize: 14 }}>Minimum 8 characters, typed twice. After this, the setup form never appears again.</p>
+              <div className="field"><label>New password</label><input className="input" type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} /></div>
+              <div className="field"><label>Type it again</label><input className="input" type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} /></div>
+              <button className="btn" style={{ marginTop: 16, width: '100%', justifyContent: 'center' }} onClick={setupOwner}>Set owner password</button>
+              <button className="btn-ghost" style={{ marginTop: 8, width: '100%', justifyContent: 'center' }} onClick={() => setShowSetup(false)}>Back to sign-in</button>
+            </div>
+          ) : (
+            <div>
+              <div className="field"><label>ইমেইল</label><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner@skillsbhandar.com" /></div>
+              <div className="field"><label>পাসওয়ার্ড</label><input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+              <button className="btn" style={{ marginTop: 18, width: '100%', justifyContent: 'center' }} onClick={signIn}>সাইন ইন</button>
+            </div>
+          )}
+          {msg && <p className="error" style={{ textAlign: 'center' }}>{msg}</p>}
+        </div>
       </div>
     );
   }
 
   const visible = SECTIONS.filter((s) => hasPermission(profile, s.perm));
+  const current = SECTIONS.find((s) => s.id === section) || SECTIONS[0];
   const sb = getClient();
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ width: 240, flexShrink: 0, borderRight: '1px solid var(--border)', padding: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>{BRAND} Admin</div>
-        <p className="muted" style={{ fontSize: 13 }}>{profile.email} · {profile.role}</p>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 20 }}>
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="logo"><span className="logo-mark">S</span>{BRAND} Admin</div>
+        <nav className="nav">
+          <div className="nav-label">Admin</div>
           {visible.map((s) => (
-            <button key={s.id} className="btn-ghost" style={{ textAlign: 'left', background: section === s.id ? 'var(--surface3)' : undefined }} onClick={() => setSection(s.id)}>{s.label}</button>
+            <button
+              key={s.id}
+              className={`nav-item${section === s.id ? ' active' : ''}`}
+              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', font: 'inherit', cursor: 'pointer' }}
+              onClick={() => setSection(s.id)}
+            >
+              <Icon name={s.icon} size={18} />
+              {s.label}
+            </button>
           ))}
         </nav>
-        <button className="btn-ghost" style={{ marginTop: 20, width: '100%' }} onClick={signOut}>সাইন আউট</button>
+        <div className="sidebar-note">
+          <strong style={{ fontSize: 13 }}>{profile.email}</strong>
+          <p className="muted" style={{ margin: '4px 0 10px', fontSize: 13, textTransform: 'capitalize' }}>{profile.role}</p>
+          <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={signOut}>সাইন আউট</button>
+        </div>
       </aside>
-      <main style={{ flex: 1, padding: 24, minWidth: 0 }}>
-        {msg && <p>{msg}</p>}
-        {section === 'overview' && data && <Overview data={data} profile={profile} onReset={refresh} />}
-        {section === 'members' && data && <Members data={data} profile={profile} onDone={refresh} />}
-        {section === 'users' && data && sb && <Users data={data} profile={profile} sb={sb} onDone={refresh} />}
-        {section === 'subadmins' && data && sb && <SubAdmins data={data} profile={profile} sb={sb} onDone={refresh} />}
-        {(section === 'skills' || section === 'categories' || section === 'tutorials' || section === 'content' || section === 'reports' || section === 'activity') && data && sb && (
-          <Editors section={section} data={data} profile={profile} sb={sb} onDone={refresh} />
-        )}
-      </main>
+      <div className="content">
+        <header className="topbar">
+          <span className="crumb">{current.label}</span>
+          <div className="topbar-actions">
+            <span className="pill">{profile.role}</span>
+          </div>
+        </header>
+        <main className="main">
+          {msg && <p className="muted">{msg}</p>}
+          {section === 'overview' && data && <Overview data={data} profile={profile} onReset={refresh} />}
+          {section === 'members' && data && <Members data={data} profile={profile} onDone={refresh} />}
+          {section === 'users' && data && sb && <Users data={data} profile={profile} sb={sb} onDone={refresh} />}
+          {section === 'subadmins' && data && sb && <SubAdmins data={data} profile={profile} sb={sb} onDone={refresh} />}
+          {(section === 'skills' || section === 'categories' || section === 'tutorials' || section === 'content' || section === 'reports' || section === 'activity') && data && sb && (
+            <Editors section={section} data={data} profile={profile} sb={sb} onDone={refresh} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
@@ -161,20 +191,49 @@ function Overview({ data, profile, onReset }: { data: Data; profile: Profile; on
     setMsg('Reset done — library is back to zero with the 8 main categories.');
     onReset();
   };
+  const members = data.profiles.filter((p) => p.role === 'member');
+  const staff = data.profiles.filter((p) => p.role === 'admin' || p.role === 'editor' || p.role === 'owner');
   return (
     <div>
-      <h1>Overview</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 12 }}>
-        <Stat label="Skills" value={data.skills.length} />
-        <Stat label="Published skills" value={data.skills.filter((s) => s.status === 'published').length} />
-        <Stat label="Categories" value={data.categories.length} />
-        <Stat label="Tutorials" value={data.tutorials.length} />
-        <Stat label="Members" value={data.profiles.filter((p) => p.role === 'member').length} />
-        <Stat label="Downloads" value={data.skills.reduce((n, s) => n + s.download_count, 0)} />
-        <Stat label="Reports open" value={data.reports.filter((r) => r.status === 'open').length} />
+      <div className="page-head">
+        <h1>Overview</h1>
+        <p className="muted">Your whole library at a glance.</p>
       </div>
+      <div className="stat-grid" style={{ marginTop: 20 }}>
+        <Stat label="Skills" value={data.skills.length} icon="book" />
+        <Stat label="Published skills" value={data.skills.filter((s) => s.status === 'published').length} icon="sparkles" />
+        <Stat label="Categories" value={data.categories.length} icon="layout" />
+        <Stat label="Tutorials" value={data.tutorials.length} icon="play" />
+        <Stat label="Members" value={members.length} icon="users" />
+        <Stat label="Staff" value={staff.length} icon="shield" />
+        <Stat label="Downloads" value={data.skills.reduce((n, s) => n + s.download_count, 0)} icon="download" />
+        <Stat label="Reports open" value={data.reports.filter((r) => r.status === 'open').length} icon="flag" />
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>Recently added skills</h2></div>
+        {data.skills.length === 0 ? <div className="empty">No skills yet — 0 skills in the library.</div> : data.skills.slice(0, 5).map((s) => (
+          <div key={s.id} className="row-card">
+            <span className="row-icon"><Icon name="book" size={19} /></span>
+            <span className="row-body"><b>{s.title}</b><span>{s.status} · {s.download_count} downloads</span></span>
+            <span className={`pill ${s.status === 'published' ? 'pill-green' : 'pill-grey'}`}>{s.status}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>Recent activity</h2></div>
+        {data.logs.length === 0 ? <div className="empty">No activity yet.</div> : data.logs.slice(0, 6).map((l) => (
+          <div key={l.id} className="row-card">
+            <span className="row-icon"><Icon name="activity" size={19} /></span>
+            <span className="row-body"><b>{l.action}</b><span>{l.target_type} {l.target_id}</span></span>
+            <span className="muted" style={{ fontSize: 13 }}>{new Date(l.created_at).toLocaleDateString()}</span>
+          </div>
+        ))}
+      </div>
+
       {isOwner(profile) && (
-        <div className="card" style={{ padding: 16, marginTop: 20 }}>
+        <div className="card" style={{ padding: 20, marginTop: 28, borderColor: 'rgba(239,68,68,.4)' }}>
           <strong>Owner only — Start from zero</strong>
           <p className="muted">Deletes all skills, tutorials, downloads and reports. Accounts and access are kept. The 8 main categories are restored.</p>
           <button className="btn-ghost" onClick={reset}>Start from zero</button>
@@ -184,8 +243,20 @@ function Overview({ data, profile, onReset }: { data: Data; profile: Profile; on
     </div>
   );
 }
-function Stat({ label, value }: { label: string; value: number }) {
-  return <div className="card" style={{ padding: 16 }}><div style={{ fontSize: 26, fontWeight: 800 }}>{value}</div><div className="muted">{label}</div></div>;
+function Stat({ label, value, icon }: { label: string; value: number; icon: IconName }) {
+  return (
+    <div className="stat-card">
+      <span className="stat-icon"><Icon name={icon} size={19} /></span>
+      <b>{value}</b>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function statusPill(status: string) {
+  if (status === 'active') return 'pill-green';
+  if (status === 'suspended') return 'pill-amber';
+  return 'pill-grey';
 }
 
 function Members({ data, profile, onDone }: { data: Data; profile: Profile; onDone: () => void }) {
@@ -203,19 +274,44 @@ function Members({ data, profile, onDone }: { data: Data; profile: Profile; onDo
     setMsg(`Member ${email} created. The password below is shown ONCE — copy it now and send it to the member.`);
     onDone();
   };
+  const members = data.profiles.filter((p) => p.role === 'member');
   return (
     <div>
-      <h1>Member Logins</h1>
-      <div className="card" style={{ padding: 16, maxWidth: 480 }}>
-        <label>Member email<input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="member@example.com" /></label>
-        <label style={{ display: 'block', marginTop: 10 }}>Premium until (optional)<input className="input" type="date" value={premium} onChange={(e) => setPremium(e.target.value)} /></label>
-        <button className="btn" style={{ marginTop: 12 }} onClick={create}>Create member + generate password</button>
-        {generated && <p><strong>Password (shown once): {generated}</strong> <button className="btn-ghost" onClick={() => navigator.clipboard.writeText(generated)}>Copy</button></p>}
+      <div className="page-head">
+        <h1>Member Logins</h1>
+        <p className="muted">Create a login for a member by email. The password is shown once.</p>
+      </div>
+      <div className="card" style={{ padding: 20, maxWidth: 520, marginTop: 20 }}>
+        <div className="field" style={{ marginTop: 0 }}><label>Member email</label><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="member@example.com" /></div>
+        <div className="field"><label>Premium until (optional)</label><input className="input" type="date" value={premium} onChange={(e) => setPremium(e.target.value)} /></div>
+        <button className="btn" style={{ marginTop: 16 }} onClick={create}>Create member + generate password</button>
+        {generated && (
+          <div style={{ marginTop: 14, background: 'var(--accent-soft)', border: '1px solid rgba(124,92,255,.35)', borderRadius: 10, padding: 12 }}>
+            <strong>Password (shown once): {generated}</strong>{' '}
+            <button className="btn-ghost" onClick={() => navigator.clipboard.writeText(generated)}>Copy</button>
+          </div>
+        )}
         {msg && <p>{msg}</p>}
       </div>
-      <h2 style={{ marginTop: 24 }}>Members ({data.profiles.filter((p) => p.role === 'member').length})</h2>
-      {data.profiles.filter((p) => p.role === 'member').map((p) => <p key={p.id}>{p.email} — {p.status}</p>)}
-      {data.profiles.filter((p) => p.role === 'member').length === 0 && <p className="muted">No members yet.</p>}
+      <div className="section">
+        <div className="section-head"><h2>Members ({members.length})</h2></div>
+        {members.length === 0 ? <div className="empty">No members yet.</div> : (
+          <div className="card" style={{ overflowX: 'auto' }}>
+            <table className="data-table">
+              <thead><tr><th>Email</th><th>Status</th><th>Joined</th></tr></thead>
+              <tbody>
+                {members.map((p) => (
+                  <tr key={p.id}>
+                    <td><strong>{p.email}</strong></td>
+                    <td><span className={`pill ${statusPill(p.status)}`}>{p.status}</span></td>
+                    <td className="muted">{new Date(p.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -244,25 +340,34 @@ function Users({ data, profile, sb, onDone }: { data: Data; profile: Profile; sb
   };
   return (
     <div>
-      <h1>Users &amp; Access</h1>
-      <p className="muted">Revoking access does NOT delete the account.</p>
-      {msg && <p>{msg}</p>}
-      {data.profiles.map((p) => (
-        <div key={p.id} className="card" style={{ padding: 12, marginBottom: 8 }}>
-          <strong>{p.email}</strong> <span className="muted">— {p.role} · {p.status}</span>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-            <button className="btn-ghost" onClick={() => act(p, 'grant')}>Grant full access</button>
-            <button className="btn-ghost" onClick={() => act(p, 'remove-access')}>Remove access</button>
-            <button className="btn-ghost" onClick={() => act(p, p.status === 'suspended' ? 'reactivate' : 'suspend')}>{p.status === 'suspended' ? 'Reactivate' : 'Suspend'}</button>
-            <button className="btn-ghost" onClick={() => act(p, 'revoke')}>Revoke</button>
-            <select className="input" style={{ width: 130 }} value={p.role} onChange={(e) => setRole(p, e.target.value)}>
-              <option value="member">member</option><option value="editor">editor</option><option value="admin">admin</option><option value="revoked">revoked</option>
-            </select>
-            <button className="btn-ghost" onClick={() => act(p, 'delete')}>Delete</button>
-          </div>
+      <div className="page-head">
+        <h1>Users &amp; Access</h1>
+        <p className="muted">Revoking access does NOT delete the account.</p>
+      </div>
+      {msg && <p style={{ marginTop: 12 }}>{msg}</p>}
+      {data.profiles.length === 0 ? <div className="empty" style={{ marginTop: 20 }}>No users yet.</div> : (
+        <div style={{ marginTop: 20 }}>
+          {data.profiles.map((p) => (
+            <div key={p.id} className="card" style={{ padding: 16, marginBottom: 10 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <strong>{p.email}</strong>
+                <span className="pill">{p.role}</span>
+                <span className={`pill ${statusPill(p.status)}`}>{p.status}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+                <button className="btn-ghost" onClick={() => act(p, 'grant')}>Grant full access</button>
+                <button className="btn-ghost" onClick={() => act(p, 'remove-access')}>Remove access</button>
+                <button className="btn-ghost" onClick={() => act(p, p.status === 'suspended' ? 'reactivate' : 'suspend')}>{p.status === 'suspended' ? 'Reactivate' : 'Suspend'}</button>
+                <button className="btn-ghost" onClick={() => act(p, 'revoke')}>Revoke</button>
+                <select className="input" style={{ width: 140 }} value={p.role} onChange={(e) => setRole(p, e.target.value)}>
+                  <option value="member">member</option><option value="editor">editor</option><option value="admin">admin</option><option value="revoked">revoked</option>
+                </select>
+                <button className="btn-ghost" onClick={() => act(p, 'delete')}>Delete</button>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
-      {data.profiles.length === 0 && <p className="muted">No users yet.</p>}
+      )}
     </div>
   );
 }
@@ -289,30 +394,41 @@ function SubAdmins({ data, profile, sb, onDone }: { data: Data; profile: Profile
   const staff = data.profiles.filter((p) => p.role === 'admin' || p.role === 'editor');
   return (
     <div>
-      <h1>Sub-Admins</h1>
-      <div className="card" style={{ padding: 16, maxWidth: 520 }}>
-        <label>Sub-admin email<input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="staff@example.com" /></label>
-        <p style={{ marginTop: 12 }}><strong>Permissions</strong></p>
+      <div className="page-head">
+        <h1>Sub-Admins</h1>
+        <p className="muted">Give a person limited admin access. Removing it makes them a normal member again — the account is not deleted.</p>
+      </div>
+      <div className="card" style={{ padding: 20, maxWidth: 560, marginTop: 20 }}>
+        <div className="field" style={{ marginTop: 0 }}><label>Sub-admin email</label><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="staff@example.com" /></div>
+        <p style={{ marginTop: 16, marginBottom: 8 }}><strong>Permissions</strong></p>
         {PERMISSIONS.map((perm) => (
-          <label key={perm} style={{ display: 'block' }}>
-            <input type="checkbox" checked={perms.includes(perm)} disabled={perm === 'Sub-Admins'} onChange={() => toggle(perm)} /> {perm}
-            {perm === 'Sub-Admins' && <span className="muted"> (only the owner can grant this)</span>}
+          <label key={perm} className="card" style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 12px', marginBottom: 6, cursor: 'pointer' }}>
+            <input type="checkbox" checked={perms.includes(perm)} disabled={perm === 'Sub-Admins'} onChange={() => toggle(perm)} style={{ width: 18, height: 18, accentColor: '#7c5cff' }} />
+            <span>{perm}</span>
+            {perm === 'Sub-Admins' && <span className="muted" style={{ fontSize: 13 }}>(only the owner can grant this)</span>}
           </label>
         ))}
-        <button className="btn" style={{ marginTop: 12 }} onClick={create}>Create sub-admin + generate password</button>
-        {generated && <p><strong>Password (shown once): {generated}</strong></p>}
+        <button className="btn" style={{ marginTop: 14 }} onClick={create}>Create sub-admin + generate password</button>
+        {generated && (
+          <div style={{ marginTop: 14, background: 'var(--accent-soft)', border: '1px solid rgba(124,92,255,.35)', borderRadius: 10, padding: 12 }}>
+            <strong>Password (shown once): {generated}</strong>
+          </div>
+        )}
         {msg && <p>{msg}</p>}
       </div>
-      <h2 style={{ marginTop: 24 }}>Current staff</h2>
-      {staff.map((p) => (
-        <div key={p.id} className="card" style={{ padding: 12, marginBottom: 8 }}>
-          <strong>{p.email}</strong> <span className="muted">— {p.role} · {(p.permissions || []).join(', ') || 'no permissions'}</span>
-          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-            <button className="btn-ghost" onClick={async () => { await sb.from('profiles').update({ role: 'member', permissions: [] }).eq('id', p.id); onDone(); }}>Remove sub-admin access</button>
+      <div className="section">
+        <div className="section-head"><h2>Current staff</h2></div>
+        {staff.length === 0 ? <div className="empty">No sub-admins yet.</div> : staff.map((p) => (
+          <div key={p.id} className="card" style={{ padding: 16, marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <strong>{p.email}</strong>
+              <span className="pill">{p.role}</span>
+            </div>
+            <p className="muted" style={{ margin: '8px 0 0', fontSize: 13 }}>{(p.permissions || []).join(', ') || 'no permissions'}</p>
+            <button className="btn-ghost" style={{ marginTop: 12 }} onClick={async () => { await sb.from('profiles').update({ role: 'member', permissions: [] }).eq('id', p.id); onDone(); }}>Remove sub-admin access</button>
           </div>
-        </div>
-      ))}
-      {staff.length === 0 && <p className="muted">No sub-admins yet.</p>}
+        ))}
+      </div>
     </div>
   );
 }

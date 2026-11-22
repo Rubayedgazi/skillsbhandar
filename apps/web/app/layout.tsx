@@ -12,14 +12,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="bn" data-theme="dark">
       <body>
-        <div style={{ display: 'flex' }}>
+        <div className="shell">
           <Sidebar />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <header style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 24px' }}>
-              <ThemeToggle />
-              <a className="btn-ghost" href="/signin">সাইন ইন</a>
+          <div className="content">
+            <header className="topbar">
+              <span className="crumb">SkillsBhandar</span>
+              <div className="topbar-actions">
+                <ThemeToggle />
+                <a className="btn-ghost" href="/signin">সাইন ইন</a>
+              </div>
             </header>
-            <main style={{ padding: '0 24px 40px' }}>{children}</main>
+            <main className="main">{children}</main>
           </div>
         </div>
       </body>

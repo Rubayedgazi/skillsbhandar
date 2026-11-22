@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { MAIN_CATEGORIES, hasPermission, slugify, type Category, type Profile, type Skill, type Tutorial } from '@skillsbhandar/shared';
 import { getClient, logActivity, loadAll } from '../lib/data';
+import { Icon } from './icons';
 
 type Data = Awaited<ReturnType<typeof loadAll>>;
 type Sb = NonNullable<ReturnType<typeof getClient>>;
@@ -46,32 +47,35 @@ function SkillsEditor({ data, profile, sb, onDone }: { data: Data; profile: Prof
   };
   return (
     <div>
-      <h1>Skills</h1>
-      {data.categories.length === 0 && <p style={{ color: 'red' }}>Create a category first — a skill needs a category.</p>}
-      <div className="card" style={{ padding: 16, maxWidth: 640 }}>
-        <label>Title<input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-        <label style={{ display: 'block', marginTop: 10 }}>Short description<input className="input" value={desc} onChange={(e) => setDesc(e.target.value)} /></label>
-        <label style={{ display: 'block', marginTop: 10 }}>Category
+      <div className="page-head">
+        <h1>Skills</h1>
+        <p className="muted">Create skills, publish them to the public library, or keep them as drafts.</p>
+      </div>
+      {data.categories.length === 0 && <p className="error" style={{ marginTop: 14 }}>Create a category first — a skill needs a category.</p>}
+      <div className="card" style={{ padding: 20, maxWidth: 640, marginTop: 20 }}>
+        <div className="field" style={{ marginTop: 0 }}><label>Title</label><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+        <div className="field"><label>Short description</label><input className="input" value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
+        <div className="field"><label>Category</label>
           <select className="input" value={cat} onChange={(e) => setCat(e.target.value)}>
             <option value="">— pick a category —</option>
             {data.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-        </label>
-        <label style={{ display: 'block', marginTop: 10 }}>SKILL.md content<textarea className="input" rows={6} value={md} onChange={(e) => setMd(e.target.value)} placeholder="# Skill name&#10;..." /></label>
-        <button className="btn" style={{ marginTop: 12 }} onClick={save}>Save skill (draft)</button>
+        </div>
+        <div className="field"><label>SKILL.md content</label><textarea className="input" rows={6} value={md} onChange={(e) => setMd(e.target.value)} placeholder="# Skill name&#10;..." /></div>
+        <button className="btn" style={{ marginTop: 16 }} onClick={save}>Save skill (draft)</button>
         {msg && <p>{msg}</p>}
       </div>
-      <div style={{ marginTop: 20 }}>
-        {data.skills.map((s) => (
-          <div key={s.id} className="card" style={{ padding: 12, marginBottom: 8 }}>
-            <strong>{s.title}</strong> <span className="muted">— {s.status} · {s.download_count} downloads</span>
-            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-              <button className="btn-ghost" onClick={() => publish(s, s.status === 'published' ? 'draft' : 'published')}>{s.status === 'published' ? 'Unpublish' : 'Publish'}</button>
-              <button className="btn-ghost" onClick={() => remove(s)}>Delete</button>
-            </div>
+      <div className="section">
+        <div className="section-head"><h2>All skills ({data.skills.length})</h2></div>
+        {data.skills.length === 0 ? <div className="empty">No skills yet — 0 skills in the library.</div> : data.skills.map((s) => (
+          <div key={s.id} className="row-card">
+            <span className="row-icon"><Icon name="book" size={19} /></span>
+            <span className="row-body"><b>{s.title}</b><span>{s.status} · {s.download_count} downloads</span></span>
+            <span className={`pill ${s.status === 'published' ? 'pill-green' : 'pill-grey'}`}>{s.status}</span>
+            <button className="btn-ghost" onClick={() => publish(s, s.status === 'published' ? 'draft' : 'published')}>{s.status === 'published' ? 'Unpublish' : 'Publish'}</button>
+            <button className="btn-ghost" onClick={() => remove(s)}>Delete</button>
           </div>
         ))}
-        {data.skills.length === 0 && <p className="muted">No skills yet — 0 skills in the library.</p>}
       </div>
     </div>
   );
@@ -95,19 +99,27 @@ function CategoriesEditor({ data, profile, sb, onDone }: { data: Data; profile: 
   };
   return (
     <div>
-      <h1>Categories</h1>
-      <div className="card" style={{ padding: 16, maxWidth: 480 }}>
-        <label>New category<input className="input" value={name} onChange={(e) => setName(e.target.value)} /></label>
-        <button className="btn" style={{ marginTop: 10 }} onClick={add}>Add category</button>
-        <button className="btn-ghost" style={{ marginLeft: 8 }} onClick={restore}>Restore the 8 main categories</button>
+      <div className="page-head">
+        <h1>Categories</h1>
+        <p className="muted">Categories organise the public library. A skill needs a category.</p>
+      </div>
+      <div className="card" style={{ padding: 20, maxWidth: 520, marginTop: 20 }}>
+        <div className="field" style={{ marginTop: 0 }}><label>New category</label><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+          <button className="btn" onClick={add}>Add category</button>
+          <button className="btn-ghost" onClick={restore}>Restore the 8 main categories</button>
+        </div>
         {msg && <p>{msg}</p>}
       </div>
-      {data.categories.map((c: Category) => (
-        <div key={c.id} className="card" style={{ padding: 12, marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-          <span><strong>{c.name}</strong> <span className="muted">— {data.skills.filter((s) => s.category_id === c.id).length} skills</span></span>
-          <button className="btn-ghost" onClick={async () => { if (confirm(`Delete category "${c.name}"?`)) { await sb.from('categories').delete().eq('id', c.id); onDone(); } }}>Delete</button>
-        </div>
-      ))}
+      <div className="section">
+        {data.categories.map((c: Category) => (
+          <div key={c.id} className="row-card">
+            <span className="row-icon"><Icon name="layout" size={19} /></span>
+            <span className="row-body"><b>{c.name}</b><span>{data.skills.filter((s) => s.category_id === c.id).length} skills</span></span>
+            <button className="btn-ghost" onClick={async () => { if (confirm(`Delete category "${c.name}"?`)) { await sb.from('categories').delete().eq('id', c.id); onDone(); } }}>Delete</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -124,23 +136,27 @@ function TutorialsEditor({ data, profile, sb, onDone }: { data: Data; profile: P
   };
   return (
     <div>
-      <h1>Tutorials</h1>
-      <div className="card" style={{ padding: 16, maxWidth: 520 }}>
-        <label>Title<input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-        <label style={{ display: 'block', marginTop: 10 }}>Video URL (YouTube embed)<input className="input" value={video} onChange={(e) => setVideo(e.target.value)} placeholder="https://www.youtube.com/embed/..." /></label>
-        <button className="btn" style={{ marginTop: 12 }} onClick={add}>Save tutorial (draft)</button>
+      <div className="page-head">
+        <h1>Tutorials</h1>
+        <p className="muted">Video tutorials for the public library.</p>
+      </div>
+      <div className="card" style={{ padding: 20, maxWidth: 560, marginTop: 20 }}>
+        <div className="field" style={{ marginTop: 0 }}><label>Title</label><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+        <div className="field"><label>Video URL (YouTube embed)</label><input className="input" value={video} onChange={(e) => setVideo(e.target.value)} placeholder="https://www.youtube.com/embed/..." /></div>
+        <button className="btn" style={{ marginTop: 16 }} onClick={add}>Save tutorial (draft)</button>
         {msg && <p>{msg}</p>}
       </div>
-      {data.tutorials.map((t: Tutorial) => (
-        <div key={t.id} className="card" style={{ padding: 12, marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-          <span><strong>{t.title}</strong> <span className="muted">— {t.status}</span></span>
-          <span style={{ display: 'flex', gap: 6 }}>
+      <div className="section">
+        {data.tutorials.length === 0 ? <div className="empty">No tutorials yet.</div> : data.tutorials.map((t: Tutorial) => (
+          <div key={t.id} className="row-card">
+            <span className="row-icon"><Icon name="play" size={19} /></span>
+            <span className="row-body"><b>{t.title}</b><span>{t.status}</span></span>
+            <span className={`pill ${t.status === 'published' ? 'pill-green' : 'pill-grey'}`}>{t.status}</span>
             <button className="btn-ghost" onClick={async () => { await sb.from('tutorials').update({ status: t.status === 'published' ? 'draft' : 'published' }).eq('id', t.id); onDone(); }}>{t.status === 'published' ? 'Unpublish' : 'Publish'}</button>
             <button className="btn-ghost" onClick={async () => { await sb.from('tutorials').delete().eq('id', t.id); onDone(); }}>Delete</button>
-          </span>
-        </div>
-      ))}
-      {data.tutorials.length === 0 && <p className="muted">No tutorials yet.</p>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -159,12 +175,15 @@ function ContentEditor({ data, profile, sb, onDone }: { data: Data; profile: Pro
   };
   return (
     <div>
-      <h1>Website Content</h1>
-      <div className="card" style={{ padding: 16, maxWidth: 560 }}>
-        <label>Hero title<input className="input" value={hero} onChange={(e) => setHero(e.target.value)} /></label>
-        <label style={{ display: 'block', marginTop: 10 }}>Hero description<input className="input" value={desc} onChange={(e) => setDesc(e.target.value)} /></label>
-        <label style={{ display: 'block', marginTop: 10 }}>Footer text<input className="input" value={footer} onChange={(e) => setFooter(e.target.value)} /></label>
-        <button className="btn" style={{ marginTop: 12 }} onClick={save}>Save</button>
+      <div className="page-head">
+        <h1>Website Content</h1>
+        <p className="muted">Edit what the public homepage says.</p>
+      </div>
+      <div className="card" style={{ padding: 20, maxWidth: 560, marginTop: 20 }}>
+        <div className="field" style={{ marginTop: 0 }}><label>Hero title</label><input className="input" value={hero} onChange={(e) => setHero(e.target.value)} /></div>
+        <div className="field"><label>Hero description</label><input className="input" value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
+        <div className="field"><label>Footer text</label><input className="input" value={footer} onChange={(e) => setFooter(e.target.value)} /></div>
+        <button className="btn" style={{ marginTop: 16 }} onClick={save}>Save</button>
         {msg && <p>{msg}</p>}
       </div>
     </div>
@@ -174,14 +193,20 @@ function ContentEditor({ data, profile, sb, onDone }: { data: Data; profile: Pro
 function Reports({ data, sb, onDone }: { data: Data; sb: Sb; onDone: () => void }) {
   return (
     <div>
-      <h1>Reports</h1>
-      {data.reports.map((r) => (
-        <div key={r.id} className="card" style={{ padding: 12, marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-          <span><strong>{r.type}</strong> — {r.message} <span className="muted">({r.status})</span></span>
-          {r.status === 'open' && <button className="btn-ghost" onClick={async () => { await sb.from('reports').update({ status: 'resolved' }).eq('id', r.id); onDone(); }}>Mark resolved</button>}
-        </div>
-      ))}
-      {data.reports.length === 0 && <p className="muted">No reports.</p>}
+      <div className="page-head">
+        <h1>Reports</h1>
+        <p className="muted">Feedback reports filed by visitors about skills.</p>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        {data.reports.length === 0 ? <div className="empty">No reports.</div> : data.reports.map((r) => (
+          <div key={r.id} className="row-card">
+            <span className="row-icon"><Icon name="flag" size={19} /></span>
+            <span className="row-body"><b>{r.type}</b><span>{r.message}</span></span>
+            <span className={`pill ${r.status === 'open' ? 'pill-amber' : 'pill-green'}`}>{r.status}</span>
+            {r.status === 'open' && <button className="btn-ghost" onClick={async () => { await sb.from('reports').update({ status: 'resolved' }).eq('id', r.id); onDone(); }}>Mark resolved</button>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -189,9 +214,19 @@ function Reports({ data, sb, onDone }: { data: Data; sb: Sb; onDone: () => void 
 function Activity({ data }: { data: Data }) {
   return (
     <div>
-      <h1>Activity Log</h1>
-      {data.logs.map((l) => <p key={l.id} className="card" style={{ padding: 10 }}>{new Date(l.created_at).toLocaleString()} — {l.action} {l.target_type} {l.target_id}</p>)}
-      {data.logs.length === 0 && <p className="muted">No activity yet.</p>}
+      <div className="page-head">
+        <h1>Activity Log</h1>
+        <p className="muted">Who did what, and when.</p>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        {data.logs.length === 0 ? <div className="empty">No activity yet.</div> : data.logs.map((l) => (
+          <div key={l.id} className="row-card">
+            <span className="row-icon"><Icon name="activity" size={19} /></span>
+            <span className="row-body"><b>{l.action}</b><span>{l.target_type} {l.target_id}</span></span>
+            <span className="muted" style={{ fontSize: 13 }}>{new Date(l.created_at).toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
