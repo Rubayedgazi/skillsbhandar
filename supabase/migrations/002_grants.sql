@@ -18,5 +18,9 @@ grant select, insert, update, delete on public.user_progress to authenticated;
 grant select, insert, update, delete on public.recently_viewed to authenticated;
 grant select, insert on public.reports to authenticated;
 grant select on public.access_grants to authenticated;
-grant select on public.profiles to authenticated;
+-- anon also needs SELECT on profiles: the staff-write RLS policies
+-- (FOR ALL) check public.profiles, so an anon SELECT on categories/skills
+-- fails with "permission denied for table profiles" without this grant.
+-- RLS on profiles itself still only lets a user read their own row.
+grant select on public.profiles to anon, authenticated;
 grant select on public.downloads to authenticated;
