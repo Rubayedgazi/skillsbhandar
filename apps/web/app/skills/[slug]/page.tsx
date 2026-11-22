@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getCategories, getSkillBySlug, getSkills } from '../../../lib/data';
 import SkillDetail from './SkillDetail';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function SkillPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

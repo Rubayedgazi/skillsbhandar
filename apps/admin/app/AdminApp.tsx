@@ -29,7 +29,10 @@ export default function AdminApp() {
   const [newPass2, setNewPass2] = useState('');
   const [showSetup, setShowSetup] = useState(false);
   const [msg, setMsg] = useState('');
+  const [okMsg, setOkMsg] = useState('');
+  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const sb = getClient();
@@ -59,21 +62,45 @@ export default function AdminApp() {
     const sb = getClient();
     if (!sb) { setMsg('Supabase is not connected yet. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel.'); return; }
     if (!email || !password) { setMsg('ইমেইল ও পাসওয়ার্ড দুটোই লিখুন।'); return; }
+    setBusy(true); setMsg(''); setOkMsg('');
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
-      // Owner first sign-in: no account yet -> offer the one-time setup form.
-      if (email === OWNER_EMAIL) { setShowSetup(true); setMsg(''); }
-      else setMsg('ভুল ইমেইল বা পাসওয়ার্ড।');
+      // Show the real reason in plain language — never a silent failure.
+      // "Email not confirmed" = Supabase email confirmation is ON.
+      // "Invalid login credentials" + owner email = no owner account yet.
+      if (error.message.toLowerCase().includes('email not confirmed')) {
+        setMsg('ইমেইল কনফার্ম করা হয়নি। Supabase-এ Authentication → Providers → Email-এ গিয়ে "Confirm email" বন্ধ করুন, অথবা আপনার ইমেইলে পাঠানো কনফার্ম লিংকে ক্লিক করুন, তারপর আবার সাইন ইন করুন।');
+      } else if (email.trim().toLowerCase() === OWNER_EMAIL) {
+        setShowSetup(true);
+        setMsg(`সাইন ইন হয়নি: ${error.message} — মালিকের অ্যাকাউন্ট এখনো তৈরি হয়নি। নিচে একবার পাসওয়ার্ড সেট করুন।`);
+      } else {
+        setMsg(`সাইন ইন হয়নি: ${error.message}`);
+      }
+      setBusy(false);
       return;
     }
-    if (!data.user) return;
-    const p = await getProfile(sb, data.user.id);
+    if (!data.user) { setBusy(false); return; }
+    let p = await getProfile(sb, data.user.id);
+    if (!p && email.trim().toLowerCase() === OWNER_EMAIL) {
+      // Auth worked but the profile row is missing (the old RLS bug).
+      // Repair it through the server route, then try again.
+      try {
+        const res = await fetch('/api/owner-setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+        if (res.ok) p = await getProfile(sb, data.user.id);
+        else {
+          const body = await res.json() as { error?: string };
+          setMsg(body.error || 'Profile row is missing. Run supabase/migrations/003_owner_profile.sql in Supabase and try again.');
+        }
+      } catch { setMsg('Profile row is missing. Run supabase/migrations/003_owner_profile.sql in Supabase and try again.'); }
+    }
     if (!p || (p.role !== 'owner' && p.role !== 'admin' && p.role !== 'editor')) {
       await sb.auth.signOut();
-      setMsg('Member accounts cannot sign in to Admin.');
+      setMsg('এই অ্যাকাউন্টের অ্যাডমিনে ঢোকার অনুমতি নেই। Member অ্যাকাউন্ট দিয়ে Admin-এ সাইন ইন করা যায় না — শুধু owner, admin ও editor পারবে।');
+      setBusy(false);
       return;
     }
     setProfile(p);
+    setBusy(false);
     await refresh();
   };
 
@@ -82,11 +109,70 @@ export default function AdminApp() {
     if (!sb) return;
     if (newPass.length < 8) { setMsg('পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।'); return; }
     if (newPass !== newPass2) { setMsg('দুইবার একই পাসওয়ার্ড লিখুন।'); return; }
+    setBusy(true); setMsg(''); setOkMsg('');
+    // 1) Server route first: creates a CONFIRMED owner user + profile row.
+    //    This cannot fail under RLS and needs no email confirmation.
+    try {
+      const res = await fetch('/api/owner-setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: newPass }) });
+      const body = await res.json() as { ok?: boolean; error?: string };
+      if (res.ok) {
+        setShowSetup(false); setBusy(false);
+        setOkMsg('মালিকের পাসওয়ার্ড সেট হয়েছে। এবার ওই পাসওয়ার্ড দিয়ে সাইন ইন করুন।');
+        return;
+      }
+      if (res.status !== 501) { setMsg(body.error || 'Owner account could not be created.'); setBusy(false); return; }
+      // 2) No service key in Vercel (501): fall back to client sign-up.
+      setMsg('সার্ভার সেটআপ উপলব্ধ নয় (service key সেট করা নেই) — সরাসরি সেটআপ চেষ্টা করছি…');
+    } catch { setMsg('সার্ভার সেটআপে পৌঁছানো যায়নি — সরাসরি সেটআপ চেষ্টা করছি…'); }
     const { data, error } = await sb.auth.signUp({ email: OWNER_EMAIL, password: newPass });
-    if (error || !data.user) { setMsg(error?.message || 'Owner account could not be created. In Supabase Auth settings, turn off email confirmation for this project.'); return; }
-    await sb.from('profiles').upsert({ id: data.user.id, email: OWNER_EMAIL, role: 'owner', status: 'active', password_set: true, permissions: [...PERMISSIONS] });
-    setShowSetup(false);
-    setMsg('Owner password set. Now sign in with it.');
+    if (error) {
+      if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists')) {
+        setMsg('মালিকের অ্যাকাউন্ট আগেই তৈরি হয়েছে। পাসওয়ার্ড মনে না থাকলে "পাসওয়ার্ড ভুলে গেছেন?" চাপুন, অথবা নিচের "অ্যাডমিন রিসেট করুন" চাপুন।');
+      } else {
+        setMsg(`Owner account could not be created: ${error.message}`);
+      }
+      setBusy(false);
+      return;
+    }
+    if (!data.user) { setMsg('Owner account could not be created.'); setBusy(false); return; }
+    if (!data.session) {
+      // Account created but email confirmation is ON — sign-in will fail.
+      setMsg('অ্যাকাউন্ট তৈরি হয়েছে, কিন্তু ইমেইল কনফার্ম করতে হবে। Supabase-এ Authentication → Providers → Email-এ গিয়ে "Confirm email" বন্ধ করুন, অথবা আপনার ইমেইলে পাঠানো লিংকে ক্লিক করুন, তারপর সাইন ইন করুন।');
+      setBusy(false);
+      return;
+    }
+    const { error: upsertError } = await sb.from('profiles').upsert({ id: data.user.id, email: OWNER_EMAIL, role: 'owner', status: 'active', password_set: true, permissions: [...PERMISSIONS] });
+    if (upsertError) {
+      setMsg(`Profile could not be saved: ${upsertError.message}. Run supabase/migrations/003_owner_profile.sql in the Supabase SQL Editor and try again.`);
+      setBusy(false);
+      return;
+    }
+    setShowSetup(false); setBusy(false);
+    setOkMsg('মালিকের পাসওয়ার্ড সেট হয়েছে। এবার ওই পাসওয়ার্ড দিয়ে সাইন ইন করুন।');
+  };
+
+  const forgotPassword = async () => {
+    const sb = getClient();
+    if (!sb) return;
+    if (!email) { setMsg('প্রথমে উপরে আপনার ইমেইল লিখুন, তারপর "পাসওয়ার্ড ভুলে গেছেন?" চাপুন।'); return; }
+    setBusy(true); setMsg(''); setOkMsg('');
+    const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined });
+    setBusy(false);
+    if (error) { setMsg(`রিসেট ইমেইল পাঠানো যায়নি: ${error.message}`); return; }
+    setOkMsg('পাসওয়ার্ড রিসেটের লিংক আপনার ইমেইলে পাঠানো হয়েছে। ইমেইল খুলে লিংকে ক্লিক করে নতুন পাসওয়ার্ড সেট করুন।');
+  };
+
+  const resetAdmin = async () => {
+    if (!confirm('অ্যাডমিন রিসেট করবেন? মালিকের লগইন মুছে যাবে, আর একবার পাসওয়ার্ড সেট করতে হবে। স্কিল, ক্যাটাগরি, টিউটোরিয়াল বা মেম্বার মুছবে না।')) return;
+    setBusy(true); setMsg(''); setOkMsg('');
+    try {
+      const res = await fetch('/api/owner-reset', { method: 'POST' });
+      const body = await res.json() as { ok?: boolean; error?: string };
+      setBusy(false);
+      if (!res.ok) { setMsg(body.error || 'Admin reset failed.'); return; }
+      setShowSetup(true);
+      setOkMsg('অ্যাডমিন রিসেট হয়েছে। এবার নতুন মালিকের পাসওয়ার্ড সেট করুন।');
+    } catch { setBusy(false); setMsg('Admin reset failed — check your connection and try again.'); }
   };
 
   const signOut = async () => {
@@ -116,17 +202,26 @@ export default function AdminApp() {
               <p className="muted" style={{ margin: 0, fontSize: 14 }}>Minimum 8 characters, typed twice. After this, the setup form never appears again.</p>
               <div className="field"><label>New password</label><input className="input" type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} /></div>
               <div className="field"><label>Type it again</label><input className="input" type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} /></div>
-              <button className="btn" style={{ marginTop: 16, width: '100%', justifyContent: 'center' }} onClick={setupOwner}>Set owner password</button>
+              <button className="btn" disabled={busy} style={{ marginTop: 16, width: '100%', justifyContent: 'center' }} onClick={setupOwner}>{busy ? 'সেট হচ্ছে…' : 'Set owner password'}</button>
               <button className="btn-ghost" style={{ marginTop: 8, width: '100%', justifyContent: 'center' }} onClick={() => setShowSetup(false)}>Back to sign-in</button>
             </div>
           ) : (
             <div>
               <div className="field"><label>ইমেইল</label><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner@skillsbhandar.com" /></div>
-              <div className="field"><label>পাসওয়ার্ড</label><input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-              <button className="btn" style={{ marginTop: 18, width: '100%', justifyContent: 'center' }} onClick={signIn}>সাইন ইন</button>
+              <div className="field"><label>পাসওয়ার্ড</label><input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') signIn(); }} /></div>
+              <button className="btn" disabled={busy} style={{ marginTop: 18, width: '100%', justifyContent: 'center' }} onClick={signIn}>{busy ? 'সাইন ইন হচ্ছে…' : 'সাইন ইন'}</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                <button className="btn-ghost" disabled={busy} style={{ width: '100%', justifyContent: 'center' }} onClick={forgotPassword}>পাসওয়ার্ড ভুলে গেছেন?</button>
+                <button className="btn-ghost" disabled={busy} style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setShowSetup(true); setMsg(''); setOkMsg(''); }}>প্রথমবার? মালিকের পাসওয়ার্ড সেট করুন</button>
+                <button className="btn-ghost" disabled={busy} style={{ width: '100%', justifyContent: 'center', borderColor: 'rgba(239,68,68,.45)' }} onClick={resetAdmin}>অ্যাডমিন রিসেট করুন (লগইন করতে না পারলে)</button>
+              </div>
+              <p className="muted" style={{ fontSize: 13, textAlign: 'center', marginTop: 14 }}>
+                লগইন করতে না পারলে: প্রথমে "অ্যাডমিন রিসেট করুন" চাপুন, তারপর নতুন পাসওয়ার্ড সেট করুন। এতে স্কিল বা মেম্বার মুছবে না।
+              </p>
             </div>
           )}
           {msg && <p className="error" style={{ textAlign: 'center' }}>{msg}</p>}
+          {okMsg && <p className="ok-msg" style={{ textAlign: 'center' }}>{okMsg}</p>}
         </div>
       </div>
     );
@@ -137,7 +232,16 @@ export default function AdminApp() {
   const sb = getClient();
   return (
     <div className="shell">
-      <aside className="sidebar">
+      {/* Mobile: top bar with hamburger — without this the admin sidebar
+          could not be opened on a phone at all. */}
+      <div className="mobile-bar">
+        <span className="logo"><span className="logo-mark">S</span>{BRAND} Admin</span>
+        <button className="icon-btn" onClick={() => setNavOpen(true)} aria-label="মেনু খুলুন">
+          <Icon name="menu" size={20} />
+        </button>
+      </div>
+      {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} />}
+      <aside className={`sidebar${navOpen ? ' open' : ''}`}>
         <div className="logo"><span className="logo-mark">S</span>{BRAND} Admin</div>
         <nav className="nav">
           <div className="nav-label">Admin</div>
@@ -146,7 +250,7 @@ export default function AdminApp() {
               key={s.id}
               className={`nav-item${section === s.id ? ' active' : ''}`}
               style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', font: 'inherit', cursor: 'pointer' }}
-              onClick={() => setSection(s.id)}
+              onClick={() => { setSection(s.id); setNavOpen(false); }}
             >
               <Icon name={s.icon} size={18} />
               {s.label}

@@ -12,7 +12,7 @@ export default function SignIn() {
     if (!sb) { setMsg('সার্ভার এখনো যুক্ত হয়নি — অ্যাডমিনকে Supabase সেটিংস দেখতে বলুন।'); return; }
     if (!email || !password) { setMsg('ইমেইল ও পাসওয়ার্ড দুটোই লিখুন।'); return; }
     const { error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) { setMsg('ভুল ইমেইল বা পাসওয়ার্ড।'); return; }
+    if (error) { setMsg(`সাইন ইন হয়নি: ${error.message}`); return; }
     setOk(true);
     setMsg('সাইন ইন হয়েছে।');
   };
