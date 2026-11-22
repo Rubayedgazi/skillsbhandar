@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getHomeData } from '../lib/data';
 import { Icon, categoryColor, categoryIcon } from '../components/icons';
+import { SkillThumb } from '../components/SkillThumb';
 
 /**
  * Speed: the homepage is cached for 60 seconds instead of fetching
@@ -10,10 +11,10 @@ import { Icon, categoryColor, categoryIcon } from '../components/icons';
  */
 export const revalidate = 60;
 
-function SkillRow({ href, title, line, icon }: { href: string; title: string; line: string; icon: 'book' | 'play' | 'sparkles' }) {
+function SkillRow({ href, title, line, icon, thumb }: { href: string; title: string; line: string; icon: 'book' | 'play' | 'sparkles'; thumb?: string | null }) {
   return (
     <Link href={href} className="row-card">
-      <span className="row-icon"><Icon name={icon} size={19} /></span>
+      {thumb ? <SkillThumb src={thumb} alt={title} /> : <span className="row-icon"><Icon name={icon} size={19} /></span>}
       <span className="row-body"><b>{title}</b><span>{line}</span></span>
       <span className="row-arrow"><Icon name="arrow" size={17} /></span>
     </Link>
@@ -71,7 +72,7 @@ export default async function Home() {
           <div className="empty">এখনো কোনো স্কিল নেই।</div>
         ) : (
           popular.map((s) => (
-            <SkillRow key={s.id} href={`/skills/${s.slug}`} title={s.title} line={s.short_description} icon="sparkles" />
+            <SkillRow key={s.id} href={`/skills/${s.slug}`} title={s.title} line={s.short_description} icon="sparkles" thumb={s.preview_image_url} />
           ))
         )}
       </section>
@@ -99,7 +100,7 @@ export default async function Home() {
           <div className="empty">এখনো কোনো স্কিল নেই।</div>
         ) : (
           recent.map((s) => (
-            <SkillRow key={s.id} href={`/skills/${s.slug}`} title={s.title} line={s.short_description} icon="book" />
+            <SkillRow key={s.id} href={`/skills/${s.slug}`} title={s.title} line={s.short_description} icon="book" thumb={s.preview_image_url} />
           ))
         )}
       </section>

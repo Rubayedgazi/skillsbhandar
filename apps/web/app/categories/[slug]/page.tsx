@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCategories, getSkills } from '../../../lib/data';
 import { Icon, categoryColor, categoryIcon } from '../../../components/icons';
+import { SkillThumb } from '../../../components/SkillThumb';
 
 /**
  * One section per category: /categories/content-creation shows ALL skills
@@ -58,7 +59,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         ) : (
           list.map((s) => (
             <Link key={s.id} href={`/skills/${s.slug}`} className="row-card">
-              <span className="row-icon"><Icon name="book" size={19} /></span>
+              <SkillThumb src={s.preview_image_url} alt={s.title} />
               <span className="row-body"><b>{s.title}</b><span>{s.short_description} · {s.difficulty}</span></span>
               <span className="row-arrow"><Icon name="arrow" size={17} /></span>
             </Link>

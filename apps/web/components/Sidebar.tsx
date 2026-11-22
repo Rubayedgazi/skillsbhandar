@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BRAND, type Category } from '@skillsbhandar/shared';
-import { Icon, categoryIcon, type IconName } from './icons';
+import { BRAND } from '@skillsbhandar/shared';
+import { Icon, type IconName } from './icons';
 
 const ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: '/', label: 'হোম', icon: 'home' },
@@ -14,7 +14,7 @@ const ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: '/account', label: 'অ্যাকাউন্ট', icon: 'user' },
 ];
 
-export default function Sidebar({ categories = [] }: { categories?: Category[] }) {
+export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   return (
@@ -47,22 +47,6 @@ export default function Sidebar({ categories = [] }: { categories?: Category[] }
               {it.label}
             </Link>
           ))}
-          {categories.length > 0 && (
-            <>
-              <div className="nav-label">ক্যাটাগরি</div>
-              {categories.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/categories/${c.slug}`}
-                  className={`nav-item${pathname === `/categories/${c.slug}` ? ' active' : ''}`}
-                  onClick={() => setOpen(false)}
-                >
-                  <Icon name={categoryIcon(c.slug)} size={18} />
-                  {c.name}
-                </Link>
-              ))}
-            </>
-          )}
         </nav>
         <div className="sidebar-note">
           <strong>লাইব্রেরি এখনো খালি</strong>

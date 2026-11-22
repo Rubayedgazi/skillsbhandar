@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createSupabaseClient, type Skill } from '@skillsbhandar/shared';
 import { Icon } from '../../../components/icons';
+import { SkillThumb } from '../../../components/SkillThumb';
 
 export default function SkillDetail({ skill, related, categoryName }: { skill: Skill; related: Skill[]; categoryName: string }) {
   const [done, setDone] = useState<string[]>([]);
@@ -47,6 +48,10 @@ export default function SkillDetail({ skill, related, categoryName }: { skill: S
   const pct = steps.length ? Math.round((done.length / steps.length) * 100) : 0;
   return (
     <div>
+      {skill.preview_image_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={skill.preview_image_url} alt={skill.title} className="skill-banner" />
+      )}
       <div className="card" style={{ padding: 24 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {categoryName && <span className="pill">{categoryName}</span>}
@@ -105,7 +110,7 @@ export default function SkillDetail({ skill, related, categoryName }: { skill: S
         <div className="section-head"><h2>সম্পর্কিত স্কিল</h2></div>
         {related.length === 0 ? <div className="empty">কোনো সম্পর্কিত স্কিল নেই।</div> : related.map((r) => (
           <Link key={r.id} href={`/skills/${r.slug}`} className="row-card">
-            <span className="row-icon"><Icon name="book" size={19} /></span>
+            <SkillThumb src={r.preview_image_url} alt={r.title} />
             <span className="row-body"><b>{r.title}</b><span>{r.short_description}</span></span>
             <span className="row-arrow"><Icon name="arrow" size={17} /></span>
           </Link>

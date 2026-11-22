@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { getCategories, getSkills } from '../../lib/data';
 import Finder from './Finder';
-import { Icon } from '../../components/icons';
+import { Icon, categoryColor, categoryIcon } from '../../components/icons';
+import { SkillThumb } from '../../components/SkillThumb';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +18,34 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
   });
   if (params.sort === 'popular') list = [...list].sort((a, b) => b.download_count - a.download_count);
   else if (params.sort === 'az') list = [...list].sort((a, b) => a.title.localeCompare(b.title));
+  const counts: Record<string, number> = {};
+  for (const s of skills) if (s.category_id) counts[s.category_id] = (counts[s.category_id] || 0) + 1;
   return (
     <div>
       <div className="page-head">
         <h1>স্কিল ঘুরে দেখুন</h1>
         <p className="muted">ক্যাটাগরি, নাম বা কাজ দিয়ে খুঁজুন।</p>
       </div>
+
+      <div className="section">
+        <div className="section-head"><h2>ক্যাটাগরি</h2></div>
+        <div className="cat-grid">
+          {categories.map((c) => {
+            const color = categoryColor(c.slug);
+            return (
+              <Link key={c.id} href={`/categories/${c.slug}`} className="cat-tile">
+                <span className="cat-icon" style={{ background: `${color}22`, color }}>
+                  <Icon name={categoryIcon(c.slug)} size={21} />
+                </span>
+                <b>{c.name}</b>
+                <span>{counts[c.id] || 0} টি স্কিল</span>
+              </Link>
+            );
+          })}
+          {categories.length === 0 && <p className="muted">এখনো কোনো ক্যাটাগরি নেই।</p>}
+        </div>
+      </div>
+
       <div style={{ marginTop: 20 }}>
         <Finder skills={skills} categories={categories} />
       </div>
@@ -47,7 +70,7 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
             <div className="empty">কোনো স্কিল পাওয়া যায়নি। লাইব্রেরিতে এখনো স্কিল যোগ করা হয়নি।</div>
           ) : list.map((s) => (
             <Link key={s.id} href={`/skills/${s.slug}`} className="row-card">
-              <span className="row-icon"><Icon name="book" size={19} /></span>
+              <SkillThumb src={s.preview_image_url} alt={s.title} />
               <span className="row-body"><b>{s.title}</b><span>{s.short_description} · {s.difficulty}</span></span>
               <span className="row-arrow"><Icon name="arrow" size={17} /></span>
             </Link>

@@ -17,31 +17,170 @@ export default function Editors({ section, data, profile, sb, onDone }: { sectio
 }
 
 function SkillsEditor({ data, profile, sb, onDone }: { data: Data; profile: Profile; sb: Sb; onDone: () => void }) {
+  type StepDraft = { heading: string; body: string; tip: string; code: string };
+  const emptyStep = (): StepDraft => ({ heading: '', body: '', tip: '', code: '' });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSlug, setEditingSlug] = useState('');
+  const [editingPublishedAt, setEditingPublishedAt] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
-  const [md, setMd] = useState('');
+  const [overview, setOverview] = useState('');
   const [cat, setCat] = useState('');
+  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
+  const [setupTime, setSetupTime] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [md, setMd] = useState('');
+  const [status, setStatus] = useState<'draft' | 'published'>('draft');
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [isPopular, setIsPopular] = useState(false);
+  const [tagsText, setTagsText] = useState('');
+  const [steps, setSteps] = useState<StepDraft[]>([]);
   const [msg, setMsg] = useState('');
+  const [okMsg, setOkMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const resetForm = () => {
+    setEditingId(null); setEditingSlug(''); setEditingPublishedAt(null);
+    setTitle(''); setDesc(''); setOverview(''); setCat('');
+    setDifficulty('beginner'); setSetupTime(''); setVideoUrl(''); setImageUrl('');
+    setMd(''); setStatus('draft'); setIsFeatured(false); setIsPopular(false);
+    setTagsText(''); setSteps([]);
+  };
+
+  const startEdit = async (s: Skill) => {
+    setMsg(''); setOkMsg('');
+    setEditingId(s.id); setEditingSlug(s.slug); setEditingPublishedAt(s.published_at || null);
+    setTitle(s.title); setDesc(s.short_description || ''); setOverview(s.overview || '');
+    setCat(s.category_id || ''); setDifficulty(s.difficulty || 'beginner');
+    setSetupTime(s.setup_time_minutes ? String(s.setup_time_minutes) : '');
+    setVideoUrl(s.video_url || ''); setImageUrl(s.preview_image_url || '');
+    setMd(s.skill_md || ''); setStatus(s.status || 'draft');
+    setIsFeatured(!!s.is_featured); setIsPopular(!!s.is_popular);
+    const { data: st } = await sb.from('skill_steps').select('*').eq('skill_id', s.id).order('step_number');
+    setSteps(((st as unknown as { heading: string; body: string; tip: string; code_example: string }[]) || []).map((x) => ({
+      heading: x.heading || '', body: x.body || '', tip: x.tip || '', code: x.code_example || '',
+    })));
+    const { data: tg } = await sb.from('skill_tags').select('tags(name)').eq('skill_id', s.id);
+    const names = ((tg as unknown as { tags: { name: string } | { name: string }[] | null }[]) || [])
+      .map((r) => (Array.isArray(r.tags) ? r.tags[0]?.name : r.tags?.name))
+      .filter(Boolean) as string[];
+    setTagsText(names.join(', '));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const moveStep = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= steps.length) return;
+    const next = [...steps];
+    [next[i], next[j]] = [next[j], next[i]];
+    setSteps(next);
+  };
+
+  const uploadImage = async (file: File) => {
+    setUploading(true); setMsg(''); setOkMsg('');
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-');
+    const path = `skills/${Date.now()}-${safeName}`;
+    const { error } = await sb.storage.from('public-images').upload(path, file, { cacheControl: '3600', upsert: false });
+    if (error) {
+      const m = error.message.toLowerCase();
+      if (m.includes('bucket not found') || m.includes('not found')) {
+        setMsg('ছবি আপলোড হয়নি: Supabase-এ public-images বাকেট নেই। supabase/migrations/005_storage.sql ফাইলটি Supabase SQL Editor-এ চালান, তারপর আবার চেষ্টা করুন। অথবা নিচে ছবির লিংক (URL) লিখে ব্যবহার করুন।');
+      } else if (m.includes('row-level security') || m.includes('policy')) {
+        setMsg('ছবি আপলোড হয়নি: Storage-এর অনুমতি (policy) নেই। supabase/migrations/005_storage.sql ফাইলটি Supabase SQL Editor-এ চালান, তারপর আবার চেষ্টা করুন।');
+      } else {
+        setMsg(`ছবি আপলোড হয়নি: ${error.message}`);
+      }
+      setUploading(false);
+      return;
+    }
+    const { data } = sb.storage.from('public-images').getPublicUrl(path);
+    setImageUrl(data.publicUrl);
+    setOkMsg('ছবি আপলোড হয়েছে — এখন স্কিলটি সেভ করলে এই ছবি থাম্বনেইল হিসেবে দেখা যাবে।');
+    setUploading(false);
+  };
+
+  const saveSteps = async (skillId: string) => {
+    const { error: delErr } = await sb.from('skill_steps').delete().eq('skill_id', skillId);
+    if (delErr) throw new Error(delErr.message);
+    const clean = steps.filter((s) => s.heading.trim() !== '');
+    if (clean.length === 0) return;
+    const { error } = await sb.from('skill_steps').insert(clean.map((s, i) => ({
+      skill_id: skillId, step_number: i + 1, heading: s.heading.trim(),
+      body: s.body || '', tip: s.tip || '', code_example: s.code || '',
+    })));
+    if (error) throw new Error(error.message);
+  };
+
+  const saveTags = async (skillId: string) => {
+    const names = tagsText.split(',').map((t) => t.trim()).filter(Boolean);
+    const { error: delErr } = await sb.from('skill_tags').delete().eq('skill_id', skillId);
+    if (delErr) throw new Error(delErr.message);
+    for (const name of names) {
+      const { data: tag, error: tagErr } = await sb.from('tags').upsert({ name, slug: slugify(name) }, { onConflict: 'slug' }).select('id').single();
+      if (tagErr || !tag) throw new Error(tagErr?.message || 'ট্যাগ সেভ হয়নি।');
+      const { error: linkErr } = await sb.from('skill_tags').insert({ skill_id: skillId, tag_id: (tag as { id: string }).id });
+      if (linkErr) throw new Error(linkErr.message);
+    }
+  };
+
   const save = async () => {
-    if (!hasPermission(profile, 'Skills')) { setMsg('You do not have the Skills permission.'); return; }
-    if (!title) { setMsg('Type a skill title first.'); return; }
-    if (!cat) { setMsg('Create a category first, then pick it here.'); return; }
-    const slug = slugify(title);
-    const { data: created, error } = await sb.from('skills').insert({ title, slug, short_description: desc, overview: desc, skill_md: md, category_id: cat, status: 'draft' }).select().single();
-    if (error) { setMsg(error.message); return; }
-    await logActivity(sb, profile.id, 'skill created', 'skill', (created as Skill)?.id || slug);
-    setTitle(''); setDesc(''); setMd('');
-    setMsg('Skill saved as draft. Publish it below when ready.');
+    if (!hasPermission(profile, 'Skills')) { setMsg('আপনার Skills-এর অনুমতি নেই।'); return; }
+    if (!title.trim()) { setMsg('প্রথমে স্কিলের নাম (Title) লিখুন।'); return; }
+    if (!cat) { setMsg('প্রথমে একটি ক্যাটাগরি বেছে নিন — ক্যাটাগরি না থাকলে Categories-এ গিয়ে বানান।'); return; }
+    setBusy(true); setMsg(''); setOkMsg('');
+    const minutes = setupTime.trim() === '' ? null : parseInt(setupTime, 10);
+    const payload = {
+      title: title.trim(),
+      slug: editingId ? editingSlug : slugify(title),
+      short_description: desc,
+      overview: overview || desc,
+      skill_md: md,
+      category_id: cat,
+      difficulty,
+      setup_time_minutes: Number.isNaN(minutes) ? null : minutes,
+      video_url: videoUrl.trim() || null,
+      preview_image_url: imageUrl.trim() || null,
+      status,
+      is_featured: isFeatured,
+      is_popular: isPopular,
+      published_at: status === 'published' ? (editingPublishedAt || new Date().toISOString()) : null,
+    };
+    let skillId = editingId;
+    if (editingId) {
+      const { error } = await sb.from('skills').update(payload).eq('id', editingId);
+      if (error) { setMsg(`স্কিল সেভ হয়নি: ${error.message}`); setBusy(false); return; }
+    } else {
+      const { data: created, error } = await sb.from('skills').insert(payload).select('id').single();
+      if (error || !created) { setMsg(`স্কিল সেভ হয়নি: ${error?.message || 'অজানা সমস্যা।'}`); setBusy(false); return; }
+      skillId = (created as { id: string }).id;
+    }
+    try {
+      await saveSteps(skillId as string);
+      await saveTags(skillId as string);
+    } catch (e) {
+      setMsg(`স্কিল সেভ হয়েছে, কিন্তু ধাপ/ট্যাগ সেভ হয়নি: ${e instanceof Error ? e.message : 'অজানা সমস্যা।'} স্কিলটি এডিট করে আবার সেভ করুন।`);
+      setBusy(false);
+      return;
+    }
+    await logActivity(sb, profile.id, editingId ? 'skill updated' : 'skill created', 'skill', skillId as string);
+    setOkMsg(editingId ? 'স্কিল আপডেট হয়েছে।' : `স্কিল সেভ হয়েছে (${status === 'published' ? 'প্রকাশিত' : 'ড্রাফট'})।`);
+    resetForm();
+    setBusy(false);
     onDone();
   };
-  const publish = async (s: Skill, status: 'published' | 'draft') => {
-    await sb.from('skills').update({ status, published_at: status === 'published' ? new Date().toISOString() : null }).eq('id', s.id);
-    await logActivity(sb, profile.id, `skill ${status}`, 'skill', s.id);
+
+  const publish = async (s: Skill, st: 'published' | 'draft') => {
+    const { error } = await sb.from('skills').update({ status: st, published_at: st === 'published' ? new Date().toISOString() : null }).eq('id', s.id);
+    if (error) { setMsg(`স্ট্যাটাস বদলানো যায়নি: ${error.message}`); return; }
+    await logActivity(sb, profile.id, `skill ${st}`, 'skill', s.id);
     onDone();
   };
   const remove = async (s: Skill) => {
     if (!confirm(`Delete skill "${s.title}"?`)) return;
-    await sb.from('skills').delete().eq('id', s.id);
+    const { error } = await sb.from('skills').delete().eq('id', s.id);
+    if (error) { setMsg(`মুছতে পারিনি: ${error.message}`); return; }
     await logActivity(sb, profile.id, 'skill deleted', 'skill', s.id);
     onDone();
   };
@@ -49,29 +188,101 @@ function SkillsEditor({ data, profile, sb, onDone }: { data: Data; profile: Prof
     <div>
       <div className="page-head">
         <h1>Skills</h1>
-        <p className="muted">Create skills, publish them to the public library, or keep them as drafts.</p>
+        <p className="muted">Create skills, publish them to the public library, or keep them as drafts. Click Edit on a skill to change it.</p>
       </div>
       {data.categories.length === 0 && <p className="error" style={{ marginTop: 14 }}>Create a category first — a skill needs a category.</p>}
       <div className="card" style={{ padding: 20, maxWidth: 640, marginTop: 20 }}>
-        <div className="field" style={{ marginTop: 0 }}><label>Title</label><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-        <div className="field"><label>Short description</label><input className="input" value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
-        <div className="field"><label>Category</label>
+        <h2 style={{ margin: '0 0 4px', fontSize: 17 }}>{editingId ? 'Edit skill' : 'Add a new skill'}</h2>
+        <div className="field" style={{ marginTop: 14 }}><label>Title *</label><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. ChatGPT Content Writing" /></div>
+        <div className="field"><label>Short description (shows in lists)</label><input className="input" value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
+        <div className="field"><label>Full description / Overview</label><textarea className="input" rows={3} value={overview} onChange={(e) => setOverview(e.target.value)} placeholder="What does this skill do, in detail?" /></div>
+        <div className="field"><label>Category *</label>
           <select className="input" value={cat} onChange={(e) => setCat(e.target.value)}>
             <option value="">— pick a category —</option>
             {data.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div className="field" style={{ flex: '1 1 160px' }}><label>Difficulty</label>
+            <select className="input" value={difficulty} onChange={(e) => setDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')}>
+              <option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option>
+            </select>
+          </div>
+          <div className="field" style={{ flex: '1 1 160px' }}><label>Setup time (minutes)</label><input className="input" type="number" min={0} value={setupTime} onChange={(e) => setSetupTime(e.target.value)} placeholder="e.g. 15" /></div>
+          <div className="field" style={{ flex: '1 1 160px' }}><label>Status</label>
+            <select className="input" value={status} onChange={(e) => setStatus(e.target.value as 'draft' | 'published')}>
+              <option value="draft">Draft (not public)</option><option value="published">Published (public)</option>
+            </select>
+          </div>
+        </div>
+        <div className="field"><label>Video URL (YouTube embed link, optional)</label><input className="input" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/embed/..." /></div>
+
+        <div className="field"><label>Thumbnail image (shows on the public site)</label>
+          {imageUrl && (
+            <div style={{ marginBottom: 10 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt="Skill thumbnail preview" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }} />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn-ghost" type="button" onClick={() => setImageUrl('')}>Remove image</button>
+              </div>
+            </div>
+          )}
+          <input className="input" type="file" accept="image/*" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadImage(f); e.target.value = ''; }} />
+          <p className="muted" style={{ fontSize: 13, margin: '6px 0 0' }}>{uploading ? 'ছবি আপলোড হচ্ছে…' : 'ছবি বেছে নিলে সেটি Supabase-এ আপলোড হবে। প্রথমবার আপলোড করতে হলে Supabase-এ 005_storage.sql চালানো থাকতে হবে।'}</p>
+          <label style={{ display: 'block', marginTop: 10, fontSize: 13 }} className="muted">…or paste an image link (URL) instead</label>
+          <input className="input" style={{ marginTop: 6 }} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
+        </div>
+
+        <div className="field"><label>Tags (comma separated, optional)</label><input className="input" value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="e.g. chatgpt, writing, seo" /></div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#7c5cff' }} /> Featured</label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={isPopular} onChange={(e) => setIsPopular(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#7c5cff' }} /> Popular</label>
+        </div>
+
         <div className="field"><label>SKILL.md content</label><textarea className="input" rows={6} value={md} onChange={(e) => setMd(e.target.value)} placeholder="# Skill name&#10;..." /></div>
-        <button className="btn" style={{ marginTop: 16 }} onClick={save}>Save skill (draft)</button>
-        {msg && <p>{msg}</p>}
+
+        <div style={{ marginTop: 20 }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: 15 }}>Steps — ধাপে ধাপে শিখুন</h3>
+          <p className="muted" style={{ fontSize: 13, margin: '0 0 10px' }}>Each step shows on the public skill page in this order. Leave empty if the skill has no steps yet.</p>
+          {steps.map((st, i) => (
+            <div key={i} className="card" style={{ padding: 14, marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>ধাপ {i + 1}</strong>
+                <span style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn-ghost" type="button" disabled={i === 0} onClick={() => moveStep(i, -1)}>↑</button>
+                  <button className="btn-ghost" type="button" disabled={i === steps.length - 1} onClick={() => moveStep(i, 1)}>↓</button>
+                  <button className="btn-ghost" type="button" onClick={() => setSteps(steps.filter((_, j) => j !== i))}>✕ মুছুন</button>
+                </span>
+              </div>
+              <div className="field"><label>Step title</label><input className="input" value={st.heading} onChange={(e) => setSteps(steps.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)))} placeholder="e.g. Open ChatGPT" /></div>
+              <div className="field"><label>Instructions</label><textarea className="input" rows={2} value={st.body} onChange={(e) => setSteps(steps.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))} /></div>
+              <div className="field"><label>Tip (optional)</label><input className="input" value={st.tip} onChange={(e) => setSteps(steps.map((x, j) => (j === i ? { ...x, tip: e.target.value } : x)))} placeholder="একটি ছোট টিপস" /></div>
+              <div className="field" style={{ marginBottom: 0 }}><label>Code example (optional)</label><textarea className="input" rows={2} value={st.code} onChange={(e) => setSteps(steps.map((x, j) => (j === i ? { ...x, code: e.target.value } : x)))} placeholder="কোড থাকলে এখানে লিখুন" /></div>
+            </div>
+          ))}
+          <button className="btn-ghost" type="button" onClick={() => setSteps([...steps, emptyStep()])}>+ ধাপ যোগ করুন</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
+          <button className="btn" disabled={busy} onClick={() => void save()}>{busy ? 'সেভ হচ্ছে…' : editingId ? 'Update skill' : 'Save skill'}</button>
+          {editingId && <button className="btn-ghost" type="button" onClick={() => { resetForm(); setMsg(''); setOkMsg(''); }}>Cancel edit</button>}
+        </div>
+        {msg && <p className="error">{msg}</p>}
+        {okMsg && <p className="ok-msg">{okMsg}</p>}
       </div>
       <div className="section">
         <div className="section-head"><h2>All skills ({data.skills.length})</h2></div>
         {data.skills.length === 0 ? <div className="empty">No skills yet — 0 skills in the library.</div> : data.skills.map((s) => (
           <div key={s.id} className="row-card">
-            <span className="row-icon"><Icon name="book" size={19} /></span>
-            <span className="row-body"><b>{s.title}</b><span>{s.status} · {s.download_count} downloads</span></span>
+            {s.preview_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={s.preview_image_url} alt="" style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 10, objectFit: 'cover' }} />
+            ) : (
+              <span className="row-icon"><Icon name="book" size={19} /></span>
+            )}
+            <span className="row-body"><b>{s.title}</b><span>{s.status} · {s.difficulty} · {s.download_count} downloads</span></span>
             <span className={`pill ${s.status === 'published' ? 'pill-green' : 'pill-grey'}`}>{s.status}</span>
+            <button className="btn-ghost" onClick={() => void startEdit(s)}>Edit</button>
             <button className="btn-ghost" onClick={() => publish(s, s.status === 'published' ? 'draft' : 'published')}>{s.status === 'published' ? 'Unpublish' : 'Publish'}</button>
             <button className="btn-ghost" onClick={() => remove(s)}>Delete</button>
           </div>
