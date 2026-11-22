@@ -2,6 +2,8 @@
 
 Premium library of AI Skills. Two apps, one Supabase backend.
 
+Live: https://skillsbhandar.vercel.app (public) and https://skillsbhandar-admin.vercel.app (admin).
+
 - **Public library** — `apps/web` — deploys to Vercel as `skillsbhandar`
   (`skillsbhandar.vercel.app`). Bengali UI, brand name stays English.
 - **Admin** — `apps/admin` — deploys to Vercel as `skillsbhandar-admin`
