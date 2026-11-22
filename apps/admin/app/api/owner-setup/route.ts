@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     id: ownerId, email: OWNER_EMAIL, role: 'owner', status: 'active',
     password_set: true, permissions: [...PERMISSIONS],
   });
-  if (profileError) return NextResponse.json({ error: `Owner account created, but the profile could not be saved: ${profileError.message}. Run supabase/migrations/003_owner_profile.sql in the Supabase SQL Editor and try again.` }, { status: 400 });
+  if (profileError) return NextResponse.json({ error: `Owner account created, but the profile could not be saved: ${profileError.message}. Run supabase/migrations/004_grants_fix.sql in the Supabase SQL Editor and try again.` }, { status: 400 });
 
   return NextResponse.json({ ok: true });
 }
