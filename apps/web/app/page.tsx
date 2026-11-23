@@ -4,6 +4,7 @@ import { getHomeData } from '../lib/data';
 import { Icon, categoryColor, categoryIcon } from '../components/icons';
 import { SkillRow } from '../components/SkillRow';
 import PricingCards from '../components/PricingCards';
+import { getPremiumPlan } from '@skillsbhandar/shared';
 
 /**
  * Speed: the homepage is cached for 60 seconds instead of fetching
@@ -110,10 +111,13 @@ export default async function Home() {
 
       <section className="section">
         <div className="section-head">
-          <h2>প্রাইসিং</h2>
+          <h2>প্রিমিয়ামে যান</h2>
           <Link href="/pricing" className="link">সব দেখুন</Link>
         </div>
-        <PricingCards plans={settings.pricing_plans && settings.pricing_plans.length > 0 ? settings.pricing_plans : DEFAULT_PRICING_PLANS} />
+        {(() => {
+          const premium = getPremiumPlan(settings.pricing_plans && settings.pricing_plans.length > 0 ? settings.pricing_plans : DEFAULT_PRICING_PLANS);
+          return premium ? <PricingCards plans={[premium]} /> : <div className="empty">প্রাইসিং শীঘ্রই আসছে।</div>;
+        })()}
       </section>
 
       <footer className="site-footer">{settings.footer_text}</footer>

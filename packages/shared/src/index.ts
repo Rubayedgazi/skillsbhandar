@@ -26,23 +26,29 @@ export interface PricingPlan {
   is_active: boolean;
 }
 
+/**
+ * The public site shows only ONE premium plan (see getPremiumPlan):
+ * the first active paid plan, preferring the Featured one. The owner
+ * edits it in Admin → Pricing. The price below is a STARTER
+ * PLACEHOLDER in Taka — the owner must change it to the real price,
+ * and must set their real bKash number in Admin → Pricing (there is
+ * NO bKash number in code — never invent one).
+ */
 export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
   {
-    slug: 'free', name: 'ফ্রি', price_taka: 0, period: 'lifetime',
-    features: ['লাইব্রেরি ঘুরে দেখুন', 'ফ্রি স্কিলগুলো ব্যবহার করুন', 'নতুন স্কিলের আপডেট'],
-    featured: false, is_active: true,
-  },
-  {
-    slug: 'premium-monthly', name: 'প্রিমিয়াম মাসিক', price_taka: 299, period: 'monthly',
+    slug: 'premium', name: 'প্রিমিয়াম', price_taka: 999, period: 'lifetime',
     features: ['সব স্কিল ব্যবহার করুন', 'সব টিউটোরিয়াল দেখুন', 'নতুন স্কিল সবার আগে পান', 'প্রিমিয়াম সাপোর্ট'],
-    featured: false, is_active: true,
-  },
-  {
-    slug: 'premium-lifetime', name: 'প্রিমিয়াম আজীবন', price_taka: 999, period: 'lifetime',
-    features: ['সব স্কিল, আজীবন', 'সব টিউটোরিয়াল, আজীবন', 'নতুন স্কিল সবার আগে পান', 'প্রিমিয়াম সাপোর্ট'],
     featured: true, is_active: true,
   },
 ];
+
+/** The single premium plan shown on the public site: first active paid
+ * plan, Featured first. Returns null when no paid plan is active. */
+export function getPremiumPlan(plans: PricingPlan[] | null | undefined): PricingPlan | null {
+  const paid = (plans || []).filter((p) => p.is_active && p.price_taka > 0);
+  if (paid.length === 0) return null;
+  return paid.find((p) => p.featured) || paid[0];
+}
 
 export function periodLabel(period: PricingPlan['period']): string {
   if (period === 'monthly') return 'মাসিক';
@@ -50,13 +56,17 @@ export function periodLabel(period: PricingPlan['period']): string {
   return 'আজীবন';
 }
 
-/** A visitor's request to buy premium. No payment is taken online yet —
- * the owner contacts the buyer to complete payment, then grants access. */
+/** A visitor's request to buy premium: bKash TrxID + verified email.
+ * No payment is taken online — the owner checks the TrxID in their
+ * bKash app, then creates the member account in Admin → Member Logins
+ * and emails the password to the buyer themselves. */
 export interface PurchaseRequest {
   id: string;
   full_name: string;
   email: string;
   mobile: string;
+  trx_id: string;
+  email_verified: boolean;
   plan_slug: string;
   plan_name: string;
   price_taka: number;
@@ -157,6 +167,9 @@ export interface SiteSettings {
   seo_description: string;
   download_base: number;
   pricing_plans: PricingPlan[];
+  /** Owner's bKash number, set in Admin → Pricing. Null = not set yet.
+   * NEVER hardcode a number here — it must come from the database. */
+  bkash_number: string | null;
 }
 
 export interface Report {

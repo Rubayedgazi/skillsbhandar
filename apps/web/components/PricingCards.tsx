@@ -28,7 +28,7 @@ export default function PricingCards({ plans, buy = true }: { plans: PricingPlan
             ))}
           </ul>
           {buy && p.price_taka > 0 && (
-            <Link href={`/pricing?plan=${p.slug}`} className="btn" style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}>
+            <Link href="/pricing" className="btn" style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}>
               প্রিমিয়াম কিনুন
             </Link>
           )}

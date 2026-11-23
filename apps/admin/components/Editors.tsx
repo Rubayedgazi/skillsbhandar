@@ -405,6 +405,7 @@ function ContentEditor({ data, profile, sb, onDone }: { data: Data; profile: Pro
 function PricingEditor({ data, profile, sb, onDone }: { data: Data; profile: Profile; sb: Sb; onDone: () => void }) {
   const saved = data.settings?.pricing_plans;
   const [plans, setPlans] = useState<PricingPlan[]>(saved && saved.length > 0 ? saved : DEFAULT_PRICING_PLANS);
+  const [bkash, setBkash] = useState(data.settings?.bkash_number || '');
   const [msg, setMsg] = useState('');
   const [okMsg, setOkMsg] = useState('');
   const [busy, setBusy] = useState(false);
@@ -418,7 +419,7 @@ function PricingEditor({ data, profile, sb, onDone }: { data: Data; profile: Pro
       .filter((p) => p.name.trim() !== '')
       .map((p) => ({ ...p, slug: p.slug || slugify(p.name), price_taka: Math.max(0, Math.floor(Number(p.price_taka) || 0)) }));
     setBusy(true); setMsg(''); setOkMsg('');
-    const { error } = await sb.from('site_settings').upsert({ id: 1, pricing_plans: clean }, { onConflict: 'id' });
+    const { error } = await sb.from('site_settings').upsert({ id: 1, pricing_plans: clean, bkash_number: bkash.trim() || null }, { onConflict: 'id' });
     setBusy(false);
     if (error) { setMsg(`প্রাইসিং সেভ হয়নি: ${error.message}`); return; }
     await logActivity(sb, profile.id, 'pricing updated', 'site_settings', '1');
@@ -441,9 +442,16 @@ function PricingEditor({ data, profile, sb, onDone }: { data: Data; profile: Pro
         <p className="muted">Edit the plans on the public Pricing page. The prices shown here are what visitors see — change them to your real prices.</p>
       </div>
       <div className="card" style={{ padding: 20, maxWidth: 680, marginTop: 20 }}>
-        <h2 style={{ margin: '0 0 4px', fontSize: 17 }}>Plans (প্ল্যানগুলো)</h2>
+        <h2 style={{ margin: '0 0 4px', fontSize: 17 }}>bKash নম্বর</h2>
         <p className="muted" style={{ fontSize: 13, margin: '0 0 12px' }}>
-          দাম টাকায় (৳)। Features-এ এক লাইনে একটি করে সুবিধা লিখুন। Featured প্ল্যানটি হাইলাইট হয়ে দেখাবে।
+          ক্রেতারা এই নম্বরে Send Money করবে — নম্বরটি পাবলিক প্রাইসিং পেজে দেখাবে। নম্বর না দিলে সেখানে "bKash নম্বর এখনো দেওয়া হয়নি" দেখাবে, কোনো ভুয়া নম্বর দেখাবে না।
+        </p>
+        <div className="field" style={{ marginTop: 0 }}><label>আপনার bKash নম্বর (Personal)</label>
+          <input className="input" value={bkash} onChange={(e) => setBkash(e.target.value)} placeholder="01XXXXXXXXX" inputMode="tel" />
+        </div>
+        <h2 style={{ margin: '18px 0 4px', fontSize: 17 }}>Plans (প্ল্যানগুলো)</h2>
+        <p className="muted" style={{ fontSize: 13, margin: '0 0 12px' }}>
+          দাম টাকায় (৳)। পাবলিক সাইটে শুধু একটি প্রিমিয়াম প্ল্যান দেখাবে — প্রথম Featured পেইড প্ল্যানটি। Features-এ এক লাইনে একটি করে সুবিধা লিখুন।
         </p>
         {plans.map((p, i) => (
           <div key={i} className="card" style={{ padding: 14, marginBottom: 10 }}>
@@ -477,17 +485,18 @@ function PricingEditor({ data, profile, sb, onDone }: { data: Data; profile: Pro
       <div className="section">
         <div className="section-head"><h2>কেনার অনুরোধ ({data.purchaseRequests.length})</h2></div>
         <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
-          কেউ প্রিমিয়াম কিনতে চাইলে তার নাম, ইমেইল ও মোবাইল এখানে আসবে। পেমেন্ট অনলাইনে নেওয়া হয় না — তার সাথে যোগাযোগ করে পেমেন্ট সম্পন্ন করুন, তারপর Member Logins-এ গিয়ে ওই ইমেইলে অ্যাকাউন্ট বানিয়ে প্রিমিয়াম দিন।
+          ক্রেতা bKash-এ টাকা পাঠিয়ে TrxID দিয়েছে, তারপর OTP দিয়ে ইমেইল যাচাই করেছে। প্রথমে আপনার bKash অ্যাপে TrxIDটি মিলিয়ে দেখুন টাকা এসেছে কি না। টাকা ঠিক থাকলে Member Logins-এ গিয়ে ওই ইমেইলে অ্যাকাউন্ট বানান — পাসওয়ার্ডটি একবার দেখাবে, কপি করে ক্রেতাকে ইমেইলে পাঠিয়ে দিন (সিস্টেম নিজে থেকে পাসওয়ার্ডের ইমেইল পাঠায় না)।
         </p>
         {data.purchaseRequests.length === 0 ? <div className="empty">এখনো কোনো কেনার অনুরোধ আসেনি।</div> : data.purchaseRequests.map((r) => (
           <div key={r.id} className="card" style={{ padding: 16, marginBottom: 10 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <strong>{r.full_name}</strong>
-              <span className="muted" style={{ fontSize: 13 }}>{r.email} · {r.mobile}</span>
+              <strong>{r.full_name || r.email}</strong>
+              <span className="muted" style={{ fontSize: 13 }}>{r.email}{r.mobile ? ` · ${r.mobile}` : ''}</span>
+              <span className={`pill ${r.email_verified ? 'pill-green' : 'pill-grey'}`}>{r.email_verified ? 'ইমেইল যাচাই হয়েছে ✓' : 'ইমেইল যাচাই হয়নি'}</span>
               <span className={`pill ${statusPill(r.status)}`}>{r.status}</span>
             </div>
             <p className="muted" style={{ margin: '8px 0 0', fontSize: 13 }}>
-              {r.plan_name} — ৳{r.price_taka.toLocaleString('bn-BD')} · {new Date(r.created_at).toLocaleString()}
+              TrxID: <strong style={{ color: 'var(--text)' }}>{r.trx_id || '—'}</strong> · {r.plan_name} — ৳{r.price_taka.toLocaleString('bn-BD')} · {new Date(r.created_at).toLocaleString()}
             </p>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
               {r.status === 'pending' && <button className="btn-ghost" onClick={() => void setStatus(r, 'contacted')}>যোগাযোগ হয়েছে</button>}

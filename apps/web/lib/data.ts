@@ -49,12 +49,13 @@ export const getSettings = cache(async (): Promise<SiteSettings> => {
     hero_description: 'সেরা AI স্কিলগুলো এক জায়গায় — শিখুন, ব্যবহার করুন, এগিয়ে যান।',
     announcement: '', footer_text: 'SkillsBhandar — আপনার সব AI কাজ। এক লাইব্রেরি।',
     logo_url: null, seo_title: 'SkillsBhandar', seo_description: 'আপনার সব AI কাজ। এক লাইব্রেরি।', download_base: 0,
-    pricing_plans: DEFAULT_PRICING_PLANS,
+    pricing_plans: DEFAULT_PRICING_PLANS, bkash_number: null,
   };
   if (!sb) return fallback;
   const { data } = await sb.from('site_settings').select('*').eq('id', 1).single();
   const settings = (data as SiteSettings) || fallback;
   if (!settings.pricing_plans) settings.pricing_plans = DEFAULT_PRICING_PLANS;
+  if (settings.bkash_number === undefined) settings.bkash_number = null;
   return settings;
 });
 

@@ -13,9 +13,14 @@ Project: `skillsbhandar` — https://cjkesuieksldzgpefujw.supabase.co
    Then run `migrations/004_grants_fix.sql` (table GRANTs — without it,
    even the service key gets "permission denied for table profiles"),
    `migrations/005_storage.sql` (public-images bucket + Storage policies
-   for thumbnail uploads), and `migrations/006_pricing.sql` (pricing
+   for thumbnail uploads), `migrations/006_pricing.sql` (pricing
    plans column + `purchase_requests` table for premium buy requests —
-   without it, the buy form on /pricing cannot save).
+   without it, the buy form on /pricing cannot save), and
+   `migrations/007_pricing_flow.sql` (owner's bKash number column on
+   site_settings + `trx_id` and `email_verified` columns on
+   purchase_requests — without it, the bKash + OTP buy flow cannot save).
+   The bKash number is typed by the owner in Admin → Pricing; it is
+   never in any file.
 4. In **Storage**, create two buckets: `skill-files` (private) and
    `public-images` (public).
 5. In **Authentication → Providers → Email**, turn OFF "Confirm email"
