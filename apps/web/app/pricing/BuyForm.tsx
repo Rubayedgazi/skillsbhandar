@@ -142,20 +142,12 @@ export default function BuyForm({ plan, bkashNumber }: { plan: PricingPlan; bkas
   };
 
   const stepsBar = (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-      {['১. পেমেন্ট', '২. ইমেইল যাচাই', '৩. সম্পন্ন'].map((label, i) => (
-        <span
-          key={label}
-          className="pill"
-          style={{
-            padding: '6px 12px', fontSize: 13,
-            background: step === i + 1 ? 'linear-gradient(135deg,#7c5cff,#5b8cff)' : undefined,
-            color: step === i + 1 ? '#fff' : undefined,
-            opacity: step < i + 1 ? 0.55 : 1,
-          }}
-        >
-          {label}
-        </span>
+    <div className="steps-indicator">
+      {['পেমেন্ট', 'ইমেইল যাচাই', 'সম্পন্ন'].map((label, i) => (
+        <div key={label} className={`step-item${step === i + 1 ? ' active' : ''}${step > i + 1 ? ' done' : ''}`}>
+          <span className="step-dot">{step > i + 1 ? '✓' : ['১', '২', '৩'][i]}</span>
+          <span className="step-label">{label}</span>
+        </div>
       ))}
     </div>
   );
@@ -163,8 +155,8 @@ export default function BuyForm({ plan, bkashNumber }: { plan: PricingPlan; bkas
   // STEP 3 — done.
   if (step === 3) {
     return (
-      <div className="card" style={{ padding: 28, maxWidth: 560, marginTop: 20, borderColor: 'rgba(52,211,153,.5)', textAlign: 'center' }}>
-        <p style={{ fontSize: 40, margin: '0 0 8px' }}>✓</p>
+      <div className="buy-card" style={{ borderColor: 'rgba(52,211,153,.5)', textAlign: 'center' }}>
+        <div className="success-check"><span style={{ fontSize: 30 }}>✓</span></div>
         <h2 style={{ margin: '0 0 10px', fontSize: 20 }}>ধন্যবাদ! আপনার অনুরোধ পেয়েছি।</h2>
         <p style={{ fontSize: 16, lineHeight: 1.7, margin: '0 0 6px' }}>
           পেমেন্ট যাচাইয়ের পর শীঘ্রই আপনি একটি ইমেইল পাবেন, যেখানে আপনার প্রিমিয়াম অ্যাকাউন্টে লগ ইন করার ইমেইল ও পাসওয়ার্ড থাকবে।
@@ -178,7 +170,7 @@ export default function BuyForm({ plan, bkashNumber }: { plan: PricingPlan; bkas
   }
 
   return (
-    <div className="card" style={{ padding: 24, maxWidth: 560, marginTop: 20 }}>
+    <div className="buy-card">
       {stepsBar}
 
       {step === 1 && (
@@ -188,15 +180,15 @@ export default function BuyForm({ plan, bkashNumber }: { plan: PricingPlan; bkas
             {plan.name} — {priceText} {plan.period === 'monthly' ? '/ মাসিক' : plan.period === 'yearly' ? '/ বার্ষিক' : '/ আজীবন'}
           </p>
           {hasBkash ? (
-            <div style={{ background: 'var(--accent-soft)', border: '1px solid rgba(124,92,255,.35)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-              <p className="muted" style={{ margin: '0 0 6px', fontSize: 13 }}>bKash (Send Money) — এই নম্বরে পাঠান:</p>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <strong style={{ fontSize: 22, letterSpacing: 1 }}>{bkashNumber!.trim()}</strong>
+            <div className="bkash-box">
+              <p className="bkash-label">bKash (Send Money) — এই নম্বরে পাঠান:</p>
+              <div className="bkash-number-row">
+                <strong className="bkash-number">{bkashNumber!.trim()}</strong>
                 <button className="btn-ghost" type="button" onClick={() => void copyNumber()}>
                   {copied ? '✓ কপি হয়েছে' : 'কপি করুন'}
                 </button>
               </div>
-              <p style={{ margin: '12px 0 0', fontSize: 14, lineHeight: 1.7 }}>
+              <p className="bkash-steps">
                 ১. bKash অ্যাপ খুলে <strong>Send Money</strong> চাপুন।<br />
                 ২. উপরের নম্বরে <strong>{priceText}</strong> পাঠান।<br />
                 ৩. পেমেন্ট শেষে bKash থেকে পাওয়া <strong>TrxID</strong> নিচে লিখুন।

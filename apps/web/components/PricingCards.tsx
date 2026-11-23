@@ -12,6 +12,36 @@ import { Icon } from './icons';
 export default function PricingCards({ plans, buy = true }: { plans: PricingPlan[]; buy?: boolean }) {
   const active = plans.filter((p) => p.is_active);
   if (active.length === 0) return <div className="empty">প্রাইসিং শীঘ্রই আসছে।</div>;
+  // Single plan (the normal case now): one strong centred premium card.
+  if (active.length === 1) {
+    const p = active[0];
+    return (
+      <div className="premium-card">
+        <div className="premium-card-head">
+          <h3>{p.name}</h3>
+          {p.featured && <span className="premium-badge">সবচেয়ে জনপ্রিয়</span>}
+        </div>
+        <p className="premium-price">
+          {p.price_taka === 0 ? 'ফ্রি' : `৳${p.price_taka.toLocaleString('bn-BD')}`}
+          {p.price_taka > 0 && <span className="muted"> / {periodLabel(p.period)}</span>}
+        </p>
+        <p className="premium-price-note">
+          {p.period === 'lifetime' ? 'একবার পেমেন্ট — আর কোনো মাসিক চার্জ নেই' : p.period === 'yearly' ? 'বার্ষিক পেমেন্ট — পুরো বছর প্রিমিয়াম' : 'মাসিক পেমেন্ট — যেকোনো সময় বাতিল করুন'}
+        </p>
+        <ul className="premium-features">
+          {p.features.map((f, i) => (
+            <li key={i}><span className="check-dot"><Icon name="check" size={13} /></span>{f}</li>
+          ))}
+        </ul>
+        {buy && p.price_taka > 0 && (
+          <Link href="/pricing" className="btn premium-cta">প্রিমিয়ামে যান →</Link>
+        )}
+        {buy && p.price_taka === 0 && (
+          <Link href="/explore" className="btn-ghost premium-cta">এখনই শুরু করুন</Link>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="price-grid">
       {active.map((p) => (
