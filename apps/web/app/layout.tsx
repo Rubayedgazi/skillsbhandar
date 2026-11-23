@@ -19,7 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <span className="crumb">SkillsBhandar</span>
               <div className="topbar-actions">
                 <ThemeToggle />
-                <a className="btn-ghost" href="/signin">সাইন ইন</a>
+                <a className="btn-ghost" href="/pricing">প্রাইসিং</a>
               </div>
             </header>
             <main className="main">{children}</main>

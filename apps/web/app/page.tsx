@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import { DEFAULT_PRICING_PLANS } from '@skillsbhandar/shared';
 import { getHomeData } from '../lib/data';
 import { Icon, categoryColor, categoryIcon } from '../components/icons';
 import { SkillRow } from '../components/SkillRow';
+import PricingCards from '../components/PricingCards';
 
 /**
  * Speed: the homepage is cached for 60 seconds instead of fetching
@@ -104,6 +106,14 @@ export default async function Home() {
             <SkillRow key={s.id} skill={s} categoryName={categories.find((c) => c.id === s.category_id)?.name} />
           ))
         )}
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2>প্রাইসিং</h2>
+          <Link href="/pricing" className="link">সব দেখুন</Link>
+        </div>
+        <PricingCards plans={settings.pricing_plans && settings.pricing_plans.length > 0 ? settings.pricing_plans : DEFAULT_PRICING_PLANS} />
       </section>
 
       <footer className="site-footer">{settings.footer_text}</footer>

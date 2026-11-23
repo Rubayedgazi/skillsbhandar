@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { MAIN_CATEGORIES, hasPermission, slugify, type Category, type Profile, type Skill, type Tutorial } from '@skillsbhandar/shared';
+import { DEFAULT_PRICING_PLANS, MAIN_CATEGORIES, hasPermission, slugify, type Category, type PricingPlan, type Profile, type PurchaseRequest, type Skill, type Tutorial } from '@skillsbhandar/shared';
 import { getClient, logActivity, loadAll } from '../lib/data';
 import { Icon } from './icons';
 
@@ -12,6 +12,7 @@ export default function Editors({ section, data, profile, sb, onDone }: { sectio
   if (section === 'categories') return <CategoriesEditor data={data} profile={profile} sb={sb} onDone={onDone} />;
   if (section === 'tutorials') return <TutorialsEditor data={data} profile={profile} sb={sb} onDone={onDone} />;
   if (section === 'content') return <ContentEditor data={data} profile={profile} sb={sb} onDone={onDone} />;
+  if (section === 'pricing') return <PricingEditor data={data} profile={profile} sb={sb} onDone={onDone} />;
   if (section === 'reports') return <Reports data={data} sb={sb} onDone={onDone} />;
   return <Activity data={data} />;
 }
@@ -396,6 +397,105 @@ function ContentEditor({ data, profile, sb, onDone }: { data: Data; profile: Pro
         <div className="field"><label>Footer text</label><input className="input" value={footer} onChange={(e) => setFooter(e.target.value)} /></div>
         <button className="btn" style={{ marginTop: 16 }} onClick={save}>Save</button>
         {msg && <p>{msg}</p>}
+      </div>
+    </div>
+  );
+}
+
+function PricingEditor({ data, profile, sb, onDone }: { data: Data; profile: Profile; sb: Sb; onDone: () => void }) {
+  const saved = data.settings?.pricing_plans;
+  const [plans, setPlans] = useState<PricingPlan[]>(saved && saved.length > 0 ? saved : DEFAULT_PRICING_PLANS);
+  const [msg, setMsg] = useState('');
+  const [okMsg, setOkMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const update = (i: number, patch: Partial<PricingPlan>) =>
+    setPlans(plans.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+
+  const save = async () => {
+    if (!hasPermission(profile, 'Pricing')) { setMsg('আপনার Pricing-এর অনুমতি নেই।'); return; }
+    const clean = plans
+      .filter((p) => p.name.trim() !== '')
+      .map((p) => ({ ...p, slug: p.slug || slugify(p.name), price_taka: Math.max(0, Math.floor(Number(p.price_taka) || 0)) }));
+    setBusy(true); setMsg(''); setOkMsg('');
+    const { error } = await sb.from('site_settings').upsert({ id: 1, pricing_plans: clean }, { onConflict: 'id' });
+    setBusy(false);
+    if (error) { setMsg(`প্রাইসিং সেভ হয়নি: ${error.message}`); return; }
+    await logActivity(sb, profile.id, 'pricing updated', 'site_settings', '1');
+    setOkMsg('প্রাইসিং সেভ হয়েছে — পাবলিক সাইটে ১ মিনিটের মধ্যে দেখা যাবে।');
+    onDone();
+  };
+
+  const setStatus = async (r: PurchaseRequest, status: PurchaseRequest['status']) => {
+    const { error } = await sb.from('purchase_requests').update({ status }).eq('id', r.id);
+    if (error) { setMsg(`স্ট্যাটাস বদলানো যায়নি: ${error.message}`); return; }
+    await logActivity(sb, profile.id, `purchase request ${status}`, 'purchase_requests', r.id);
+    onDone();
+  };
+
+  const statusPill = (s: string) => (s === 'pending' ? 'pill-amber' : s === 'approved' ? 'pill-green' : s === 'rejected' ? 'pill-red' : 'pill-grey');
+  return (
+    <div>
+      <div className="page-head">
+        <h1>Pricing</h1>
+        <p className="muted">Edit the plans on the public Pricing page. The prices shown here are what visitors see — change them to your real prices.</p>
+      </div>
+      <div className="card" style={{ padding: 20, maxWidth: 680, marginTop: 20 }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: 17 }}>Plans (প্ল্যানগুলো)</h2>
+        <p className="muted" style={{ fontSize: 13, margin: '0 0 12px' }}>
+          দাম টাকায় (৳)। Features-এ এক লাইনে একটি করে সুবিধা লিখুন। Featured প্ল্যানটি হাইলাইট হয়ে দেখাবে।
+        </p>
+        {plans.map((p, i) => (
+          <div key={i} className="card" style={{ padding: 14, marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div className="field" style={{ flex: '2 1 180px', marginTop: 0 }}><label>Plan name</label><input className="input" value={p.name} onChange={(e) => update(i, { name: e.target.value })} /></div>
+              <div className="field" style={{ flex: '1 1 110px', marginTop: 0 }}><label>Price (৳)</label><input className="input" type="number" min={0} value={p.price_taka} onChange={(e) => update(i, { price_taka: Number(e.target.value) })} /></div>
+              <div className="field" style={{ flex: '1 1 130px', marginTop: 0 }}><label>Period</label>
+                <select className="input" value={p.period} onChange={(e) => update(i, { period: e.target.value as PricingPlan['period'] })}>
+                  <option value="monthly">মাসিক</option><option value="yearly">বার্ষিক</option><option value="lifetime">আজীবন</option>
+                </select>
+              </div>
+            </div>
+            <div className="field"><label>Features — এক লাইনে একটি করে</label>
+              <textarea className="input" rows={3} value={p.features.join('\n')} onChange={(e) => update(i, { features: e.target.value.split('\n').map((f) => f.trim()).filter(Boolean) })} />
+            </div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={p.featured} onChange={(e) => update(i, { featured: e.target.checked })} style={{ width: 18, height: 18, accentColor: '#7c5cff' }} /> Featured (হাইলাইট)</label>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}><input type="checkbox" checked={p.is_active} onChange={(e) => update(i, { is_active: e.target.checked })} style={{ width: 18, height: 18, accentColor: '#7c5cff' }} /> দেখাবে (Active)</label>
+              <button className="btn-ghost" type="button" onClick={() => setPlans(plans.filter((_, j) => j !== i))}>✕ প্ল্যান মুছুন</button>
+            </div>
+          </div>
+        ))}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+          <button className="btn-ghost" type="button" onClick={() => setPlans([...plans, { slug: '', name: 'নতুন প্ল্যান', price_taka: 0, period: 'monthly', features: [], featured: false, is_active: true }])}>+ প্ল্যান যোগ করুন</button>
+          <button className="btn" disabled={busy} onClick={() => void save()}>{busy ? 'সেভ হচ্ছে…' : 'Save pricing'}</button>
+        </div>
+        {msg && <p className="error">{msg}</p>}
+        {okMsg && <p className="ok-msg">{okMsg}</p>}
+      </div>
+
+      <div className="section">
+        <div className="section-head"><h2>কেনার অনুরোধ ({data.purchaseRequests.length})</h2></div>
+        <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
+          কেউ প্রিমিয়াম কিনতে চাইলে তার নাম, ইমেইল ও মোবাইল এখানে আসবে। পেমেন্ট অনলাইনে নেওয়া হয় না — তার সাথে যোগাযোগ করে পেমেন্ট সম্পন্ন করুন, তারপর Member Logins-এ গিয়ে ওই ইমেইলে অ্যাকাউন্ট বানিয়ে প্রিমিয়াম দিন।
+        </p>
+        {data.purchaseRequests.length === 0 ? <div className="empty">এখনো কোনো কেনার অনুরোধ আসেনি।</div> : data.purchaseRequests.map((r) => (
+          <div key={r.id} className="card" style={{ padding: 16, marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <strong>{r.full_name}</strong>
+              <span className="muted" style={{ fontSize: 13 }}>{r.email} · {r.mobile}</span>
+              <span className={`pill ${statusPill(r.status)}`}>{r.status}</span>
+            </div>
+            <p className="muted" style={{ margin: '8px 0 0', fontSize: 13 }}>
+              {r.plan_name} — ৳{r.price_taka.toLocaleString('bn-BD')} · {new Date(r.created_at).toLocaleString()}
+            </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+              {r.status === 'pending' && <button className="btn-ghost" onClick={() => void setStatus(r, 'contacted')}>যোগাযোগ হয়েছে</button>}
+              {r.status !== 'approved' && <button className="btn-ghost" onClick={() => void setStatus(r, 'approved')}>অনুমোদন (Approved)</button>}
+              {r.status !== 'rejected' && <button className="btn-ghost" onClick={() => void setStatus(r, 'rejected')}>বাতিল (Rejected)</button>}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

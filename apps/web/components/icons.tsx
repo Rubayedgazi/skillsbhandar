@@ -35,6 +35,7 @@ const PATHS: Record<string, React.ReactNode> = {
   trending: <><path d="m3 17 6-6 4 4 8-8" /><path d="M14 7h7v7" /></>,
   clapperboard: <><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.3 1.5-2.6l15-3.9c1.1-.3 2.3.3 2.6 1.5z" /><path d="M3 11v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M7 8l3-1M12 6.7 15 5.8M17 5.5l2-.6" /></>,
   terminal: <><path d="m4 17 6-5-6-5M12 19h8" /></>,
+  tag: <><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-8-8V4h8.6l8 8a2 2 0 0 1 1.4 1.4z" /><circle cx="7.5" cy="7.5" r="1.5" /></>,
   blocks: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="8.5" y="12.5" width="7" height="7" rx="1" /></>,
 };
 

@@ -6,9 +6,63 @@ export const SUPABASE_URL = 'https://cjkesuieksldzgpefujw.supabase.co';
 
 export const PERMISSIONS = [
   'Overview', 'Member Logins', 'Users & Access', 'Skills', 'Categories',
-  'Tutorials', 'Website Content', 'Reports', 'Activity Log', 'Sub-Admins',
+  'Tutorials', 'Website Content', 'Pricing', 'Reports', 'Activity Log', 'Sub-Admins',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
+
+/**
+ * Pricing plans. Stored as JSON in site_settings.pricing_plans (see
+ * supabase/migrations/006_pricing.sql) so the owner can edit them in
+ * Admin → Pricing without touching code. The prices below are STARTER
+ * PLACEHOLDERS in Taka — the owner must change them to real prices.
+ */
+export interface PricingPlan {
+  slug: string;
+  name: string;
+  price_taka: number;
+  period: 'monthly' | 'yearly' | 'lifetime';
+  features: string[];
+  featured: boolean;
+  is_active: boolean;
+}
+
+export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
+  {
+    slug: 'free', name: 'ফ্রি', price_taka: 0, period: 'lifetime',
+    features: ['লাইব্রেরি ঘুরে দেখুন', 'ফ্রি স্কিলগুলো ব্যবহার করুন', 'নতুন স্কিলের আপডেট'],
+    featured: false, is_active: true,
+  },
+  {
+    slug: 'premium-monthly', name: 'প্রিমিয়াম মাসিক', price_taka: 299, period: 'monthly',
+    features: ['সব স্কিল ব্যবহার করুন', 'সব টিউটোরিয়াল দেখুন', 'নতুন স্কিল সবার আগে পান', 'প্রিমিয়াম সাপোর্ট'],
+    featured: false, is_active: true,
+  },
+  {
+    slug: 'premium-lifetime', name: 'প্রিমিয়াম আজীবন', price_taka: 999, period: 'lifetime',
+    features: ['সব স্কিল, আজীবন', 'সব টিউটোরিয়াল, আজীবন', 'নতুন স্কিল সবার আগে পান', 'প্রিমিয়াম সাপোর্ট'],
+    featured: true, is_active: true,
+  },
+];
+
+export function periodLabel(period: PricingPlan['period']): string {
+  if (period === 'monthly') return 'মাসিক';
+  if (period === 'yearly') return 'বার্ষিক';
+  return 'আজীবন';
+}
+
+/** A visitor's request to buy premium. No payment is taken online yet —
+ * the owner contacts the buyer to complete payment, then grants access. */
+export interface PurchaseRequest {
+  id: string;
+  full_name: string;
+  email: string;
+  mobile: string;
+  plan_slug: string;
+  plan_name: string;
+  price_taka: number;
+  status: 'pending' | 'contacted' | 'approved' | 'rejected';
+  created_at: string;
+}
 
 export const MAIN_CATEGORIES: { name: string; slug: string }[] = [
   { name: 'SEO & Marketing', slug: 'seo-marketing' },
@@ -102,6 +156,7 @@ export interface SiteSettings {
   seo_title: string;
   seo_description: string;
   download_base: number;
+  pricing_plans: PricingPlan[];
 }
 
 export interface Report {

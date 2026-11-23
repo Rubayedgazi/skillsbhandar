@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { createSupabaseClient, type Category, type Skill, type SiteSettings, type Tutorial } from '@skillsbhandar/shared';
+import { DEFAULT_PRICING_PLANS, createSupabaseClient, type Category, type Skill, type SiteSettings, type Tutorial } from '@skillsbhandar/shared';
 
 export function getClient() { return createSupabaseClient(); }
 
@@ -49,10 +49,13 @@ export const getSettings = cache(async (): Promise<SiteSettings> => {
     hero_description: 'সেরা AI স্কিলগুলো এক জায়গায় — শিখুন, ব্যবহার করুন, এগিয়ে যান।',
     announcement: '', footer_text: 'SkillsBhandar — আপনার সব AI কাজ। এক লাইব্রেরি।',
     logo_url: null, seo_title: 'SkillsBhandar', seo_description: 'আপনার সব AI কাজ। এক লাইব্রেরি।', download_base: 0,
+    pricing_plans: DEFAULT_PRICING_PLANS,
   };
   if (!sb) return fallback;
   const { data } = await sb.from('site_settings').select('*').eq('id', 1).single();
-  return (data as SiteSettings) || fallback;
+  const settings = (data as SiteSettings) || fallback;
+  if (!settings.pricing_plans) settings.pricing_plans = DEFAULT_PRICING_PLANS;
+  return settings;
 });
 
 /** Count skills per category from an already-fetched list — no extra query. */

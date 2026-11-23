@@ -15,6 +15,7 @@ const SECTIONS: { id: string; label: string; perm: Permission; icon: IconName }[
   { id: 'categories', label: 'Categories', perm: 'Categories', icon: 'layout' },
   { id: 'tutorials', label: 'Tutorials', perm: 'Tutorials', icon: 'play' },
   { id: 'content', label: 'Website Content', perm: 'Website Content', icon: 'pen' },
+  { id: 'pricing', label: 'Pricing', perm: 'Pricing', icon: 'tag' },
   { id: 'reports', label: 'Reports', perm: 'Reports', icon: 'flag' },
   { id: 'activity', label: 'Activity Log', perm: 'Activity Log', icon: 'activity' },
 ];
@@ -276,7 +277,7 @@ export default function AdminApp() {
           {section === 'members' && data && <Members data={data} profile={profile} onDone={refresh} />}
           {section === 'users' && data && sb && <Users data={data} profile={profile} sb={sb} onDone={refresh} />}
           {section === 'subadmins' && data && sb && <SubAdmins data={data} profile={profile} sb={sb} onDone={refresh} />}
-          {(section === 'skills' || section === 'categories' || section === 'tutorials' || section === 'content' || section === 'reports' || section === 'activity') && data && sb && (
+          {(section === 'skills' || section === 'categories' || section === 'tutorials' || section === 'content' || section === 'pricing' || section === 'reports' || section === 'activity') && data && sb && (
             <Editors section={section} data={data} profile={profile} sb={sb} onDone={refresh} />
           )}
         </main>
@@ -311,6 +312,7 @@ function Overview({ data, profile, onReset }: { data: Data; profile: Profile; on
         <Stat label="Members" value={members.length} icon="users" />
         <Stat label="Staff" value={staff.length} icon="shield" />
         <Stat label="Downloads" value={data.skills.reduce((n, s) => n + s.download_count, 0)} icon="download" />
+        <Stat label="কেনার অনুরোধ" value={data.purchaseRequests.filter((r) => r.status === 'pending').length} icon="tag" />
         <Stat label="Reports open" value={data.reports.filter((r) => r.status === 'open').length} icon="flag" />
       </div>
 

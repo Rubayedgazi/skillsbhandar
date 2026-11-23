@@ -11,7 +11,7 @@ const ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: '/tutorials', label: 'টিউটোরিয়াল', icon: 'play' },
   { href: '/bookmarks', label: 'বুকমার্ক', icon: 'bookmark' },
   { href: '/recent', label: 'সম্প্রতি দেখা', icon: 'clock' },
-  { href: '/account', label: 'অ্যাকাউন্ট', icon: 'user' },
+  { href: '/pricing', label: 'প্রাইসিং', icon: 'tag' },
 ];
 
 export default function Sidebar() {

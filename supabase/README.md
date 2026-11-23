@@ -10,6 +10,12 @@ Project: `skillsbhandar` — https://cjkesuieksldzgpefujw.supabase.co
    the Admin login**: it lets a user create their own profile row, lets
    staff read all profiles, and lets staff write site settings, skill
    steps, activity logs, etc. Without it the owner setup fails silently.
+   Then run `migrations/004_grants_fix.sql` (table GRANTs — without it,
+   even the service key gets "permission denied for table profiles"),
+   `migrations/005_storage.sql` (public-images bucket + Storage policies
+   for thumbnail uploads), and `migrations/006_pricing.sql` (pricing
+   plans column + `purchase_requests` table for premium buy requests —
+   without it, the buy form on /pricing cannot save).
 4. In **Storage**, create two buckets: `skill-files` (private) and
    `public-images` (public).
 5. In **Authentication → Providers → Email**, turn OFF "Confirm email"
