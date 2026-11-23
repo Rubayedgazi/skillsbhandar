@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getCategories, getSkills } from '../../lib/data';
 import Finder from './Finder';
 import { Icon, categoryColor, categoryIcon } from '../../components/icons';
-import { SkillThumb } from '../../components/SkillThumb';
+import { SkillRow } from '../../components/SkillRow';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,11 +69,7 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
           {list.length === 0 ? (
             <div className="empty">কোনো স্কিল পাওয়া যায়নি। লাইব্রেরিতে এখনো স্কিল যোগ করা হয়নি।</div>
           ) : list.map((s) => (
-            <Link key={s.id} href={`/skills/${s.slug}`} className="row-card">
-              <SkillThumb src={s.preview_image_url} alt={s.title} />
-              <span className="row-body"><b>{s.title}</b><span>{s.short_description} · {s.difficulty}</span></span>
-              <span className="row-arrow"><Icon name="arrow" size={17} /></span>
-            </Link>
+            <SkillRow key={s.id} skill={s} categoryName={categories.find((c) => c.id === s.category_id)?.name} />
           ))}
         </div>
       </div>

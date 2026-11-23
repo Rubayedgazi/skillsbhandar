@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getHomeData } from '../lib/data';
 import { Icon, categoryColor, categoryIcon } from '../components/icons';
-import { SkillThumb } from '../components/SkillThumb';
+import { SkillRow } from '../components/SkillRow';
 
 /**
  * Speed: the homepage is cached for 60 seconds instead of fetching
@@ -11,10 +11,11 @@ import { SkillThumb } from '../components/SkillThumb';
  */
 export const revalidate = 60;
 
-function SkillRow({ href, title, line, icon, thumb }: { href: string; title: string; line: string; icon: 'book' | 'play' | 'sparkles'; thumb?: string | null }) {
+/** Tutorials have no thumbnail, so they keep the old compact row. */
+function TutorialRow({ href, title, line }: { href: string; title: string; line: string }) {
   return (
     <Link href={href} className="row-card">
-      {thumb ? <SkillThumb src={thumb} alt={title} /> : <span className="row-icon"><Icon name={icon} size={19} /></span>}
+      <span className="row-icon"><Icon name="play" size={19} /></span>
       <span className="row-body"><b>{title}</b><span>{line}</span></span>
       <span className="row-arrow"><Icon name="arrow" size={17} /></span>
     </Link>
@@ -72,7 +73,7 @@ export default async function Home() {
           <div className="empty">এখনো কোনো স্কিল নেই।</div>
         ) : (
           popular.map((s) => (
-            <SkillRow key={s.id} href={`/skills/${s.slug}`} title={s.title} line={s.short_description} icon="sparkles" thumb={s.preview_image_url} />
+            <SkillRow key={s.id} skill={s} categoryName={categories.find((c) => c.id === s.category_id)?.name} />
           ))
         )}
       </section>
@@ -86,7 +87,7 @@ export default async function Home() {
           <div className="empty">এখনো কোনো টিউটোরিয়াল নেই।</div>
         ) : (
           tutorials.slice(0, 5).map((t) => (
-            <SkillRow key={t.id} href="/tutorials" title={t.title} line={t.description} icon="play" />
+            <TutorialRow key={t.id} href="/tutorials" title={t.title} line={t.description} />
           ))
         )}
       </section>
@@ -100,7 +101,7 @@ export default async function Home() {
           <div className="empty">এখনো কোনো স্কিল নেই।</div>
         ) : (
           recent.map((s) => (
-            <SkillRow key={s.id} href={`/skills/${s.slug}`} title={s.title} line={s.short_description} icon="book" thumb={s.preview_image_url} />
+            <SkillRow key={s.id} skill={s} categoryName={categories.find((c) => c.id === s.category_id)?.name} />
           ))
         )}
       </section>

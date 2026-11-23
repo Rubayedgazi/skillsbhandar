@@ -192,3 +192,26 @@ footer.site-footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid 
   .topbar { padding: 14px 48px; }
   .cat-grid { gap: 18px; }
 }
+
+/* ---------- YouTube-style skill list rows ----------
+   Like YouTube search results: one full-width row per skill, a large
+   16:9 thumbnail on the left, title / description / meta on the right.
+   The old compact .row-card is untouched and still used for tutorials
+   (no thumbnail) and the Finder results. */
+.yt-row { display: flex; gap: 16px; align-items: flex-start; padding: 14px 0; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
+.yt-row:last-child { border-bottom: none; }
+.yt-row:hover .yt-title { color: var(--accent1); }
+.yt-thumb { width: 360px; flex-shrink: 0; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: var(--surface3); display: flex; align-items: center; justify-content: center; color: var(--accent1); }
+.yt-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.yt-body { flex: 1; min-width: 0; padding-top: 2px; }
+.yt-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 18px; font-weight: 700; line-height: 1.35; }
+.yt-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 6px; font-size: 14px; color: var(--muted); }
+.yt-meta { display: block; margin-top: 8px; font-size: 13px; color: var(--muted); }
+@media (max-width: 1080px) { .yt-thumb { width: 280px; } }
+@media (max-width: 900px) { .yt-thumb { width: 240px; } .yt-title { font-size: 17px; } }
+@media (max-width: 560px) {
+  /* Phone: stack like YouTube on mobile — thumbnail on top, full width. */
+  .yt-row { flex-direction: column; gap: 10px; padding: 12px 0; }
+  .yt-thumb { width: 100%; }
+  .yt-title { font-size: 16px; }
+}
